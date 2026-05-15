@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --font-title    : 'Cinzel', serif;
+  --font-body     : 'Crimson Pro', serif;
+  --font-mono     : 'JetBrains Mono', monospace;
+  --color-bg      : #0d0a07;
+  --color-wood    : #2d1b0e;
+  --color-amber   : #f59e0b;
+  --color-stone   : #1a1614;
+  --color-parch   : #e8dcc8;
+  --color-blood   : #7f1d1d;
+  --color-magic   : #4c1d95;
+  --color-npc     : #6b7280;
+  --color-gold    : #d97706;
+  --color-success : #065f46;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--color-bg);
+  font-family: var(--font-body);
+  color: var(--color-parch);
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+}
+
+#game-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: block;
+}
+
+#ui-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#ui-overlay::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 999;
+}
+
+.panel-parchment {
+  background: rgba(45, 27, 14, 0.92);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 4px;
+  backdrop-filter: blur(4px);
+}
+
+.font-title  { font-family: var(--font-title); }
+.font-body   { font-family: var(--font-body); }
+.font-mono   { font-family: var(--font-mono); }
+
+.ui-interactive { pointer-events: all; }
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: rgba(45,27,14,0.5); }
+::-webkit-scrollbar-thumb { background: rgba(245,158,11,0.4); border-radius: 2px; }
+
+/* Animations */
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+@keyframes floatUp {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-20px); opacity: 0; }
+}
+
+@keyframes pulse-gold {
+  0%, 100% { text-shadow: 0 0 4px rgba(245,158,11,0.3); }
+  50% { text-shadow: 0 0 12px rgba(245,158,11,0.8); }
+}
+
+.animate-flicker { animation: flicker 2s ease-in-out infinite; }
+.animate-pulse-gold { animation: pulse-gold 3s ease-in-out infinite; }
