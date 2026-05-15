@@ -1,0 +1,663 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║   REBIRTH: THE MAGICIAN — STEP 6 of 6 (FINAL)                               ║
+║   VISUAL POLISH, PARTICLES, POST-PROCESS, AUDIO, PERFORMANCE, BUILD        ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1 — POST-PROCESSING (engine/Renderer.js)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Use Three.js EffectComposer pipeline:
+
+PASSES IN ORDER:
+  1. RenderPass(scene, camera)
+  2. BLOOM PASS (UnrealBloomPass)
+     threshold : 0.3
+     strength  : 1.2
+     radius    : 0.8
+     Applied to: skill effects, loot orbs, boss glows,
+                 elemental auras, moon, stars, aurora
+  3. COLOR GRADING (custom ShaderPass)
+     Per-area color LUT:
+       Greenfield : warm green tint, high saturation
+       Darkwood   : desaturated, slight purple tint
+       Ashborne   : warm orange-red tint
+       Frostpeak  : cool blue-white tint
+       Stormcoast : dark blue-green tint, high contrast
+       Inferno    : deep red-black tint, low saturation
+     Smooth lerp between color grades on area transition
+  4. VIGNETTE (custom ShaderPass)
+     Default: subtle dark edges (intensity 0.3)
+     Boss fight: stronger vignette (intensity 0.6)
+     Low HP: red vignette pulses with heartbeat rhythm
+  5. FILM GRAIN (FilmPass or custom)
+     Subtle noise overlay, intensity 0.08
+     Adds cinematic texture
+  6. CHROMATIC ABERRATION (custom ShaderPass)
+     Default: disabled
+     On heavy hit received: brief CA spike (0.3s)
+     On ultimate skill: brief CA on cast (0.2s)
+  7. MOTION BLUR (custom velocity-based)
+     Enabled during: dodge roll, sprint, boss dash attacks
+     Strength: based on player speed
+     Disabled in settings: Reduce Motion option
+
+SCREEN SHAKE SYSTEM:
+  ScreenShake.trigger(intensity, duration, falloff)
+  intensity 0.1 : light (small enemy hit)
+  intensity 0.3 : medium (player hit, boss stomp)
+  intensity 0.6 : heavy (boss phase change)
+  intensity 1.0 : massive (meteor, ultimate skills)
+  Implementation: camera.position += random * intensity * decay
+  Falloff: exponential, reaches 0 before duration ends
+  Settings: Reduce Motion disables screen shake
+
+SLOW-MOTION SYSTEM:
+  SlowMo.trigger(timeScale, duration)
+  timeScale 0.2: dramatic slow (boss death, parry counter)
+  timeScale 0.5: partial slow (dodge at last moment)
+  Implementation: delta multiplied by timeScale
+  Visual: slight blur + colour desaturation during slow-mo
+  Audio: pitch down during slow-mo, pitch up on resume
+
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2 — PARTICLE SYSTEMS (world/environment/ParticleEffects.js)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+All particles use THREE.Points with BufferGeometry.
+Use object pooling — pre-allocate, reuse, never destroy mid-game.
+Max total particles active at once: 8000
+
+PARTICLE POOL CLASS:
+class ParticlePool {
+  constructor(maxCount, scene)
+  emit(config)   // spawn burst or continuous stream
+  update(delta)  // move all active particles
+  return(id)     // return particles to pool when done
+}
+
+PARTICLE CONFIGS:
+
+FIRE BURST (skill hits, fire effects):
+  count: 40-80
+  lifespan: 0.6s
+  startColor: #ff6020  endColor: #ff2000
+  startSize: 0.3       endSize: 0.05
+  speed: random 3-8 units/sec, upward + outward
+  gravity: -2 (slow fall)
+  emissive: true (glows)
+
+ICE SHATTER (Ice Lance hit, freeze):
+  count: 30-50
+  lifespan: 0.8s
+  startColor: #a0e8ff  endColor: #ffffff
+  startSize: 0.2       endSize: 0.0
+  speed: random 4-10, outward burst
+  gravity: -8 (fall fast like ice shards)
+  rotation: random spin
+
+THUNDER SPARK (Thunder skills):
+  count: 60-100
+  lifespan: 0.4s
+  startColor: #ffd020  endColor: #ffffff
+  startSize: 0.15      endSize: 0.0
+  speed: very fast 8-15, random directions
+  gravity: 0 (float)
+  flicker: rapid opacity oscillation
+
+EARTH DUST (Earth skills, Ground Slam):
+  count: 80-120
+  lifespan: 1.2s
+  startColor: #c08040  endColor: #80602a
+  startSize: 0.5       endSize: 0.8 (expand then fade)
+  speed: 2-5 outward, sideways spread
+  gravity: -1
+
+DARK MIST (Dark skills):
+  count: 50-70
+  lifespan: 1.5s
+  startColor: #6010a0  endColor: #200040
+  startSize: 0.6       endSize: 1.2
+  speed: 1-3 slow drift
+  gravity: 0.5 (float upward)
+  opacity: 0.7 → 0
+
+WIND STREAM (Wind skills):
+  count: 40-60
+  lifespan: 0.5s
+  startColor: #80ff80  endColor: #40c040
+  startSize: 0.15      endSize: 0.0
+  speed: 10-20 very fast, directional
+  gravity: 0
+  trail: leave short line trail
+
+LIGHT BURST (Light skills, healing):
+  count: 60-80
+  lifespan: 0.8s
+  startColor: #ffffff  endColor: #ffffa0
+  startSize: 0.25      endSize: 0.0
+  speed: 3-6 outward
+  gravity: 1 (float up)
+  sparkle: random tiny bright flashes
+
+ELEMENTAL REACTION BURST (combo effects):
+  count: 100-150 (bigger than normal)
+  Colors: both element colors mixed
+  lifespan: 1.0s
+  startSize: 0.4       endSize: 0.0
+  speed: 5-12 outward sphere burst
+  Extra: PointLight flash at center
+    Color: reaction color, intensity 5, range 12
+    Duration: 0.3s then fade to 0
+
+SKILL IMPACT RING (on AoE ground impact):
+  Flat ring of particles expanding outward on ground
+  geometry: ring of 60 Points at y=0.1
+  Expand from 0 to AoE radius in 0.3s
+  Fade opacity as it expands
+  Color: skill element color
+
+LOOT ORBS (item drops):
+  10-15 sparkle particles orbiting the orb
+  Lazy elliptical orbit, random speeds
+  Color matches item tier
+  Continuous while orb exists
+
+BLOOD/HIT EFFECT:
+  On enemy hit: small burst of element-colored particles
+  Direction: away from hit direction
+  count: 8-15, fast, short lifespan 0.3s
+
+BOSS DEATH EXPLOSION:
+  count: 400-600 (massive)
+  Multiple bursts in sequence (0.1s intervals)
+  Mix of boss element + white
+  Lifespan: 2-3s
+  Large sizes, expand then fade
+  Extra: multiple PointLight flashes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3 — AUDIO ENGINE (engine/AudioEngine.js)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+All audio is Web Audio API procedural — no audio files.
+
+AUDIO CONTEXT SETUP:
+  AudioContext with master gain node
+  Separate gain buses: music, sfx, ambient, ui
+  All buses connect to master
+
+PROCEDURAL MUSIC SYSTEM:
+  Each area has a music generator function
+  Music uses oscillators on pentatonic/modal scales
+  Layers: bass drone + melody + percussion
+
+  GREENFIELD THEME (C major pentatonic):
+    Bass: sine wave 65Hz, slow swell
+    Melody: triangle waves on C4 E4 G4 A4 C5
+    Arpeggios: 0.8 beat intervals, random walk
+    Reverb: convolver node, large hall
+    Mood: hopeful, warm
+
+  DARKWOOD THEME (D minor):
+    Bass: deep sawtooth 73Hz, heavy filter LFO
+    Melody: sparse, long notes, minor intervals
+    Tension string: bandpass noise, slow
+    Mood: eerie, tense, dark
+
+  ASHBORNE THEME (Phrygian mode):
+    Percussion: filtered noise bursts, rhythmic
+    Melody: exotic intervals, middle-eastern feel
+    Drone: low rumble of desert heat
+    Mood: intense, foreign, dangerous
+
+  FROSTPEAK THEME (A minor, slow):
+    Choir pad: multiple detuned oscillators
+    Bell tones: sharp attack, long decay
+    Wind: white noise through bandpass, fades in/out
+    Mood: vast, cold, epic
+
+  STORMCOAST THEME (E minor, urgent):
+    Percussion: irregular, tense drum patterns
+    Bass: distorted, driving
+    Thunder: random noise bursts
+    Mood: urgent, dangerous, electric
+
+  INFERNO THEME (B diminished, dark):
+    Choir: dark, dissonant clusters
+    Industrial rhythm: heavy low frequencies
+    Fire crackle layer: continuous brown noise
+    Mood: apocalyptic, final
+
+BOSS MUSIC:
+  Each boss has unique music that starts on boss intro
+  Crossfades from area music over 3 seconds
+  Boss music has 3 intensity layers:
+    Layer 1: always playing (base)
+    Layer 2: fades in at Phase 2
+    Layer 3: fades in at Phase 3 (most intense)
+  On boss death: music swells triumphantly then fades
+
+COMBAT MUSIC SYSTEM:
+  Normal combat: area music gets +percussion layer
+  Low HP: music pitch drops 5%, minor key shift
+  Critical HP: tense fast percussion added
+  Out of combat 5s: combat layers fade out
+
+SFX SYSTEM:
+  All sounds procedurally generated:
+
+  SKILL SOUNDS:
+    Fireball launch : filtered noise burst, high freq
+    Fireball impact : low boom + crackle
+    Ice Lance       : glass-like ping + whoosh
+    Thunder Chain   : electric crackle, ZAP sound
+    Arcane Vortex   : wind + magical hum
+    Meteor          : incoming whistle + massive boom
+    Sword slash     : sharp air cut + metallic ring
+    Shield bash     : heavy metallic clunk
+    Arrow fire      : bowstring twang + whoosh
+    Ground slam     : deep thud + stone crack
+    Thunder fist    : electric punch + thunder crack
+
+  HIT SOUNDS:
+    Hit landed   : impact thud + element sound layer
+    Crit hit     : sharper impact + higher pitch
+    Block        : metallic clang
+    Dodge        : air whoosh
+    Miss         : quiet swoosh
+
+  ELEMENTAL REACTION SOUNDS:
+    Fire+Ice     : steam hiss + bang
+    Fire+Thunder : electric crackle + bang
+    Thunder+Wind : wind howl + lightning crack
+    Dark+Light   : bass boom + high frequency ring
+
+  UI SOUNDS:
+    Menu click  : clean click
+    Quest accept: ascending 3-note motif
+    Level up    : fanfare flourish
+    Item pickup : gentle chime
+    Chest open  : creak + shimmer
+    Checkpoint  : soft ascending tones
+    Death       : deep descending notes
+
+POSITIONAL AUDIO:
+  All combat SFX are positional (3D panning)
+  Web Audio PannerNode with HRTF
+  Player hears enemies from correct direction
+  Distance attenuation: linear, rolloff 1.5
+  Ambient sounds (wind, water): non-positional
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 4 — PERFORMANCE OPTIMIZATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TARGET: 60fps on mid-range laptop (integrated graphics)
+MINIMUM: 30fps on low-end hardware with Low settings
+
+LOD (Level of Detail) SYSTEM:
+  THREE.LOD for all characters and major objects
+  LOD0 (< 30 units)  : full detail geometry
+  LOD1 (30-80 units) : 50% poly reduction
+  LOD2 (80-150 units): simple box/sphere proxy
+  LOD3 (> 150 units) : billboard (PlaneGeometry + canvas texture)
+  Update LOD every 10 frames (not every frame)
+
+INSTANCING (must use for all repeated geometry):
+  Trees         : InstancedMesh (one draw call all trunks)
+  Canopies      : InstancedMesh (one draw call all canopies)
+  Grass blades  : InstancedMesh
+  Enemy basic   : InstancedMesh per enemy type
+  Particles     : Points with BufferGeometry (not individual meshes)
+  Loot orbs     : InstancedMesh
+  Rain drops    : InstancedMesh
+
+FRUSTUM CULLING:
+  Three.js handles automatically
+  Ensure ALL custom geometry calls:
+    geometry.computeBoundingBox()
+    geometry.computeBoundingSphere()
+  After any vertex manipulation in terrain:
+    terrain.geometry.computeVertexNormals()
+    terrain.geometry.computeBoundingSphere()
+
+DRAW CALL BUDGET:
+  Target: < 200 draw calls per frame
+  Terrain: 1 draw call
+  Trees: 2 draw calls (trunk + canopy instanced)
+  Characters: 3-5 draw calls each
+  Particles: 1-3 draw calls total
+  Sky: 2 draw calls
+  UI: handled by React (separate render)
+
+SHADOW OPTIMIZATION:
+  Shadow casting: ONLY player + boss + active skill effects
+  Shadow receiving: terrain, buildings, characters
+  Shadow map size: 1024 (Low), 2048 (High), 4096 (Ultra)
+  Shadow camera frustum: tight around player (50 unit radius)
+  Update shadow map every 2 frames on Low settings
+
+GEOMETRY DISPOSAL (critical — prevent memory leaks):
+  SceneManager.unloadArea() must dispose EVERYTHING:
+    scene.traverse(obj => {
+      if (obj.isMesh) {
+        obj.geometry.dispose()
+        if (Array.isArray(obj.material))
+          obj.material.forEach(m => m.dispose())
+        else obj.material.dispose()
+      }
+    })
+    while (scene.children.length > 0)
+      scene.remove(scene.children[0])
+    renderer.renderLists.dispose()
+
+TEXTURE MANAGEMENT:
+  All textures canvas-generated, max 512x512
+  Use MeshLambertMaterial by default (cheaper than PBR)
+  MeshStandardMaterial ONLY for: boss armor, ice surfaces,
+    legendary equipment glow, aurora
+  Reuse materials where possible (same color = same material instance)
+
+FRAME BUDGET (target per-frame ms):
+  Render (3D scene)  : max 10ms
+  Physics update     : max 2ms
+  Particle update    : max 2ms
+  Enemy AI           : max 1ms (spread across ticks)
+  React HUD render   : max 2ms (only re-renders on state change)
+  Total budget       : 16ms (for 60fps)
+
+ENEMY POOLING:
+  Pre-spawn up to 20 enemies per area, reuse on death
+  Dead enemy: reset position to off-screen, wait for respawn
+  Never call new Mesh() during gameplay after load
+
+TEXTURE ATLASING:
+  Combine small canvas textures into atlas where possible
+  Enemy health bar backgrounds → single canvas texture
+  UI icons → single sprite sheet canvas
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 5 — CINEMATIC MICRO-DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+These details elevate the game from "functional" to "cinematic":
+
+1. CAMERA BREATHING
+   Camera has subtle idle sway: sin wave, amplitude 0.03,
+   frequency 0.4Hz. Mimics natural handheld camera.
+   Stops during boss cutscenes.
+
+2. WIND AFFECTS EVERYTHING
+   Trees, grass, capes, cloth all sway with same wind direction
+   Wind direction changes slowly (every 30-60 seconds)
+   Wind intensity affects particle drift direction
+   Shader uniform: windDirection + windStrength
+
+3. MOON SHADOWS
+   At night, moon casts soft shadows opposite to sun
+   Creates dramatic long shadows through forest
+   Shadow color: deep blue, not black
+
+4. BOSS HEALTH GATE
+   Boss cannot die until Phase Transition animation plays
+   At 60% and 30% HP: boss becomes immune briefly (0.3s)
+   Phase change visual: shockwave outward, new aura appears
+   Player sees "PHASE 2" / "PHASE 3" text briefly
+
+5. SKILL COMBO VISUAL
+   Consecutive skill uses: hit counter appears
+   2-hit: "2 HIT" white
+   5-hit: "5 HIT" yellow
+   10-hit: "10 HIT" gold + spark effect
+   Max combo: keeps counting indefinitely
+   Resets if: 3 seconds without a hit
+
+6. EQUIPMENT GLOW SCALES WITH LEVEL
+   T5 Lv1 equipment: faint glow
+   T5 Lv10 equipment: intense glow + orbiting particles
+   PointLight intensity = 0.3 + (equipLevel * 0.15)
+
+7. AREA AMBIENT LIFE
+   Birds fly in background (Greenfield + Forest): simple V shapes
+   Fish jump in river (Greenfield): splash particles
+   Bats emerge at night (Darkwood): flutter patterns
+   Sand swirls near rocks (Ashborne): small particle eddies
+   Snow settles on player geometry (Frostpeak):
+     White particles land on player, accumulate, then slide off
+   Lightning strike craters (Stormcoast): scorch marks on ground
+     Persist during session, fade after 60 seconds
+
+8. ELEMENTAL WEATHER INTERACTION
+   Rain extinguishes fire zones after 10 seconds
+   Thunder storm electrifies puddles automatically
+   Desert sandstorm reduces Ice skill effectiveness 20%
+   Blizzard reduces Fire skill range 30%
+
+9. ENEMY LAST WORDS
+   Each enemy type has a death sound/expression
+   Bosses have dramatic death monologues (text + voice-like synth):
+   Kraetos: deep rumble → silence
+   Vethis: laughing fade → whisper "...the shadows remain..."
+   Pyraak: explosion → dying fire crackle
+   Vorthys: final roar → ice cracking → silence
+   Zharkon: thunder crack → long electric fade
+   Valdris: deep voice synth → "Remember this..."
+
+10. LEGENDARY ITEM DISCOVERY
+    Finding first T5 item: FULL SCREEN MOMENT
+    Screen slows to 0.2x speed
+    Golden light rays appear
+    Triumphant 4-second musical flourish
+    Item name in enormous gold text
+    Then returns to normal speed
+
+11. CHECKPOINT LORE FRAGMENTS
+    Each checkpoint stone has tiny carved text
+    Interact to read: 2-3 line lore snippet
+    Reveals ancient history of Aethermoor
+    Not required to read — purely for lore seekers
+
+12. DEATH LOCATION MEMORY
+    Small ghostly marker at location where player last died
+    Visible only to player, fades after 10 minutes
+    No gameplay effect — just personal visual memory
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6 — FINAL BUILD CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CORE SYSTEMS:
+  [ ] Game starts and reaches main menu
+  [ ] All 6 areas load without errors
+  [ ] Player NEVER falls through terrain (heightmap snap works)
+  [ ] Player NEVER clips through buildings or walls
+  [ ] All 4 roles selectable and functional
+  [ ] All skills work with correct damage and cooldowns
+  [ ] Elemental reactions trigger correctly
+  [ ] Combat hits register correctly (no phantom hits)
+  [ ] Enemy AI patrols, detects, attacks, dies correctly
+  [ ] All 6 bosses are defeatable
+  [ ] Boss phases trigger at correct HP thresholds
+
+PROGRESSION:
+  [ ] EXP and leveling work correctly
+  [ ] All skills unlock at correct levels
+  [ ] Equipment drops with correct tier per area
+  [ ] Equipment equipping changes visible stats
+  [ ] Enhancement system works (with failure rates)
+  [ ] Crafting system produces correct items
+  [ ] Gold economy balanced (not too easy, not impossible)
+
+WORLD:
+  [ ] Day/night cycle runs correctly (60s per hour)
+  [ ] Lighting changes smoothly per phase
+  [ ] Weather systems work per area
+  [ ] Aurora visible in Frostpeak at night
+  [ ] Ambient particles match each area
+  [ ] Area transitions (portals) work correctly
+  [ ] Fast travel works between activated checkpoints
+
+QUESTS & STORY:
+  [ ] All 7 main quests completable in order
+  [ ] Quest objectives track correctly
+  [ ] All 18 side quests available and completable
+  [ ] Quest markers appear on compass and minimap
+  [ ] Quest rewards given correctly
+  [ ] All 3 endings reachable
+
+UI & HUD:
+  [ ] HP/MP bars update correctly
+  [ ] Skill cooldown overlays work
+  [ ] Damage numbers appear and animate correctly
+  [ ] Minimap shows player, enemies, objectives
+  [ ] World map opens and shows correct state
+  [ ] Backpack opens, shows inventory correctly
+  [ ] Crafting panel functional
+  [ ] Boss HP bar appears and tracks correctly
+  [ ] All screens transition smoothly (no flash/stutter)
+
+PERFORMANCE:
+  [ ] 60fps maintained on Medium settings
+  [ ] No memory leaks after 20+ minutes play
+  [ ] Area loading < 5 seconds
+  [ ] No particle system crashes
+  [ ] Enemy pool works (no new mesh allocations during gameplay)
+
+SAVE/LOAD:
+  [ ] Autosave triggers at checkpoints and quests
+  [ ] Manual save works from pause menu
+  [ ] Load correctly restores: position, inventory, quests, stats
+  [ ] Death respawn works correctly
+  [ ] New Game+ unlocks and scales enemies correctly
+
+AUDIO:
+  [ ] Area music plays and crossfades on transition
+  [ ] Boss music starts on boss intro
+  [ ] All skill SFX play at correct moments
+  [ ] Positional audio works (stereo panning)
+  [ ] Volume sliders work in settings
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 7 — VERCEL.JSON / NGINX DEPLOY CONFIG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+vercel.json:
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
+
+Nginx config (for VPS self-hosted):
+server {
+    listen 80;
+    server_name _;
+    root /var/www/rebirth/dist;
+    index index.html;
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+    location ~* \.(js|css|png|jpg|gif|ico|svg|woff2)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json;
+    gzip_min_length 1024;
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 8 — AI BUILD INSTRUCTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HOW TO BUILD WITH AN AI (recommended session order):
+
+SESSION 1 — Give AI: STEP_1
+  Create: package.json, vite.config.js, index.html, index.css,
+          main.jsx, folder structure, EventBus.js, SaveSystem.js,
+          GameContext.jsx, utils/ files
+  Verify: npm install succeeds
+
+SESSION 2 — Give AI: STEP_2
+  Create: engine/Renderer.js, engine/SceneManager.js,
+          world/terrain/TerrainGen.js + TerrainCollider.js,
+          world/terrain/WaterSystem.js,
+          world/environment/SkySystem.js + DayCycle.js,
+          world/environment/WeatherSystem.js,
+          world/environment/Vegetation.js,
+          All 6 area files (world/areas/*.js),
+          world/props/Buildings.js + Portals.js + Chests.js
+  Verify: First area renders, player can stand on ground
+
+SESSION 3 — Give AI: STEP_3
+  Create: engine/InputManager.js, engine/CameraSystem.js,
+          engine/PhysicsWorld.js, engine/CollisionSystem.js,
+          characters/Player.js,
+          characters/roles/ (all 4 role files),
+          combat/CombatSystem.js, combat/SkillSystem.js,
+          combat/ElementalSystem.js, combat/StatusEffects.js,
+          combat/ProjectileSystem.js,
+          characters/enemies/EnemyBase.js + EnemyAI.js,
+          characters/enemies/bosses/ (all 6 boss files),
+          data/skills.js, data/enemies.js, data/bosses.js
+  Verify: Player moves, skills fire, enemies react, boss spawns
+
+SESSION 4 — Give AI: STEP_4
+  Create: data/equipment.js, data/items.js,
+          engine/LootSystem.js,
+          world/props/LootOrbs.js,
+          components/Inventory/Backpack.jsx,
+          components/Inventory/EquipmentSlots.jsx,
+          components/Inventory/ItemTooltip.jsx,
+          components/Inventory/CraftingPanel.jsx,
+          engine/SaveSystem.js (full implementation)
+  Verify: Enemies drop loot, inventory opens, crafting works
+
+SESSION 5 — Give AI: STEP_5
+  Create: data/quests.js, engine/QuestSystem.js,
+          characters/npcs/VillageNPC.js,
+          components/HUD/GameHUD.jsx (all HUD components),
+          components/Map/WorldMap.jsx,
+          components/Quest/QuestLog.jsx + QuestPopup.jsx,
+          components/RoleSelect/RoleSwitch.jsx,
+          components/Dialogue/NPCDialogue.jsx,
+          All Screens/ components,
+          App.jsx (final, wires everything)
+  Verify: Full game loop works, quests track, UI complete
+
+SESSION 6 — Give AI: STEP_6
+  Create: world/environment/ParticleEffects.js (full pools),
+          engine/AudioEngine.js (all procedural music + SFX),
+          engine/ScreenShake.js, engine/SlowMotion.js,
+          Post-processing passes in Renderer.js,
+          All cinematic micro-details
+          Run: npm run build
+  Verify: Build succeeds, all checklist items pass
+
+CRITICAL REMINDERS FOR AI:
+  - NEVER use pre-made 3D assets (no .glb/.gltf files)
+  - ALWAYS use heightmap snapping for terrain collision
+  - Player must NEVER fall through terrain — test this first
+  - Use InstancedMesh for trees, grass, enemies of same type
+  - Dispose geometry/material on every area unload
+  - Particle pools MUST be pre-allocated, never new during play
+  - All audio is Web Audio API only (no audio files)
+  - Test each area loads and unloads without memory increase
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ALL 6 STEPS COMPLETE.
+"REBIRTH: THE MAGICIAN" is fully specified.
+
+4 roles. 7 elements. 12 elemental reactions.
+6 areas. 6 bosses. 7 main quests. 18 side quests.
+5 equipment tiers. 6 equipment sets. 3 endings.
+A world built from nothing but math and geometry.
+
+Build it. Play it. Become the Magician.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

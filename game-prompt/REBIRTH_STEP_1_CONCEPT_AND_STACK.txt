@@ -1,0 +1,486 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║   REBIRTH: THE MAGICIAN — STEP 1 of 6                                       ║
+║   CONCEPT, LORE, TECH STACK, PROJECT SETUP                                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1 — GAME CONCEPT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TITLE        : Rebirth: The Magician
+GENRE        : 3D Open World Action RPG
+PLATFORM     : Browser (Desktop Chrome/Firefox/Edge)
+PLAYTIME     : 10-20 hours per full run
+
+LORE:
+  The world of Aethermoor was once protected by four ancient orders:
+  The Mages of the Arcane Spire, The Swordsmen of the Iron Vow,
+  The Archers of the Verdant Wind, and The Fighters of the Obsidian Fist.
+
+  One thousand years ago, a catastrophe called THE SHATTERING destroyed
+  the Arcane Spire and scattered its power across the world in the form
+  of elemental shards. Without the Spire's protection, a dark entity
+  known as VALDRIS THE UNDYING began corrupting the land — turning
+  forests to ash, freezing mountains with cursed ice, and raising the
+  dead as his army.
+
+  You are AUREN — the last known heir to the Arcane Spire bloodline.
+  After being killed in a raid on your village, you are reborn
+  (hence: REBIRTH) with a fraction of the Spire's ancient power.
+  You must travel across 6 regions, reclaim the elemental shards,
+  rebuild your power, and ultimately face Valdris before he
+  consumes all of Aethermoor.
+
+TONE:
+  Cinematic, epic, visually stunning.
+  Think: Genshin Impact meets Dark Souls lite meets Zelda BOTW.
+  Beautiful environments, dramatic boss fights, satisfying combat.
+
+CORE LOOP:
+  Explore area → Fight enemies → Collect loot/shards → Level up
+  → Upgrade equipment → Unlock new area → Repeat → Face Boss
+  → Unlock next region → Final boss
+
+EMOTIONAL ARC:
+  - Start: weak, confused, rediscovering power
+  - Mid: growing stronger, understanding the lore
+  - Late: powerful, dramatic, cinematic confrontations
+  - End: epic final battle, redemption
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2 — TECH STACK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+3D ENGINE     : Three.js r168+
+PHYSICS       : cannon-es (character collision, terrain)
+FRAMEWORK     : React 18 (HUD/UI layer only)
+LANGUAGE      : JavaScript ES2022 (NO TypeScript)
+BUNDLER       : Vite 5+
+STYLING       : Pure CSS + CSS variables (NO Tailwind, NO UI libs)
+UI ANIMATION  : Framer Motion (menus, skill icons, damage numbers)
+3D ANIMATION  : Three.js AnimationMixer (procedural keyframes)
+GLOBAL STATE  : React Context + useReducer (UI state)
+GAME STATE    : Zustand (game world state, player stats)
+STORAGE       : localStorage key = "rebirth_save_v1"
+AUDIO         : Web Audio API (procedural sfx + music)
+POST-PROCESS  : Three.js custom passes (bloom, color grading)
+PARTICLES     : Custom Three.js particle systems (no external lib)
+FONTS         : Cinzel + Rajdhani + JetBrains Mono (Google Fonts)
+
+STRICTLY FORBIDDEN:
+  - Any pre-made 3D asset files (.glb, .gltf, .fbx, .obj)
+  - ALL geometry must be procedural (Three.js primitives + custom)
+  - TypeScript
+  - Any UI component libraries
+  - Babylon.js, PlayCanvas, Unity WebGL
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3 — PACKAGE.JSON
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{
+  "name": "rebirth-the-magician",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.168.0",
+    "cannon-es": "^0.20.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "framer-motion": "^11.0.0",
+    "zustand": "^4.5.0",
+    "postprocessing": "^6.36.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.0",
+    "vite": "^5.4.0"
+  }
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 4 — VITE.CONFIG.JS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  optimizeDeps: {
+    include: ['three', 'cannon-es', 'zustand']
+  },
+  build: {
+    target: 'es2022',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          three: ['three'],
+          physics: ['cannon-es'],
+          react: ['react', 'react-dom', 'framer-motion'],
+        }
+      }
+    }
+  }
+})
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 5 — INDEX.HTML
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rebirth: The Magician</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6 — INDEX.CSS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+:root {
+  --font-title   : 'Cinzel', serif;
+  --font-ui      : 'Rajdhani', sans-serif;
+  --font-mono    : 'JetBrains Mono', monospace;
+
+  /* Colors */
+  --col-bg       : #05080f;
+  --col-dark     : #0a0e1a;
+  --col-panel    : rgba(10, 14, 26, 0.92);
+  --col-border   : rgba(120, 160, 255, 0.2);
+  --col-text     : #c8d8f0;
+  --col-gold     : #f0c040;
+  --col-blue     : #4080ff;
+  --col-purple   : #a040ff;
+  --col-red      : #ff4040;
+  --col-green    : #40ff80;
+  --col-cyan     : #40d0ff;
+
+  /* Element colors */
+  --elem-fire    : #ff6020;
+  --elem-ice     : #60d0ff;
+  --elem-thunder : #ffd020;
+  --elem-wind    : #80ff80;
+  --elem-earth   : #c08040;
+  --elem-dark    : #a020ff;
+  --elem-light   : #ffffff;
+
+  /* Role colors */
+  --role-magician  : #a040ff;
+  --role-swordsman : #4080ff;
+  --role-archer    : #40c040;
+  --role-fighter   : #ff8020;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--col-bg);
+  font-family: var(--font-ui);
+  color: var(--col-text);
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+}
+
+#game-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: block;
+}
+
+#ui-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.ui-interactive { pointer-events: all; }
+
+.panel {
+  background: var(--col-panel);
+  border: 1px solid var(--col-border);
+  border-radius: 6px;
+  backdrop-filter: blur(8px);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: rgba(10,14,26,0.5); }
+::-webkit-scrollbar-thumb { background: rgba(120,160,255,0.3); border-radius: 2px; }
+
+/* Glow effects */
+.glow-blue   { text-shadow: 0 0 12px rgba(64,128,255,0.8); }
+.glow-purple { text-shadow: 0 0 12px rgba(160,64,255,0.8); }
+.glow-gold   { text-shadow: 0 0 12px rgba(240,192,64,0.8); }
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes damage-float {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-60px); opacity: 0; }
+}
+@keyframes skill-ready {
+  0% { box-shadow: 0 0 0 rgba(120,160,255,0); }
+  100% { box-shadow: 0 0 16px rgba(120,160,255,0.8); }
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 7 — FOLDER STRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+src/
+├── main.jsx
+├── App.jsx
+├── index.css
+├── engine/
+│   ├── GameEngine.js         — master game loop
+│   ├── Renderer.js           — Three.js renderer + post-process
+│   ├── PhysicsWorld.js       — cannon-es wrapper
+│   ├── InputManager.js       — keyboard/mouse/gamepad
+│   ├── CameraSystem.js       — third-person camera
+│   ├── AudioEngine.js        — Web Audio API
+│   ├── EventBus.js           — pub/sub events
+│   ├── SceneManager.js       — area loading/unloading
+│   ├── CollisionSystem.js    — terrain + object collision
+│   └── SaveSystem.js         — save/load/checkpoint
+├── world/
+│   ├── areas/
+│   │   ├── GreenfieldVillage.js
+│   │   ├── DarkwoodForest.js
+│   │   ├── AshborneDesert.js
+│   │   ├── FrostpeakMountains.js
+│   │   ├── StormcoastRuins.js
+│   │   └── InfernoCitadel.js
+│   ├── terrain/
+│   │   ├── TerrainGen.js     — heightmap + vertex colors
+│   │   ├── TerrainCollider.js — physics mesh for terrain
+│   │   └── WaterSystem.js    — animated water shader
+│   ├── environment/
+│   │   ├── SkySystem.js      — dynamic sky + moon + stars
+│   │   ├── WeatherSystem.js  — rain, snow, sandstorm, fog
+│   │   ├── DayCycle.js       — day/evening/night cycle
+│   │   ├── SeasonSystem.js   — per-area season visuals
+│   │   ├── Vegetation.js     — trees, grass, flowers
+│   │   └── ParticleEffects.js — ambient particles per area
+│   └── props/
+│       ├── Buildings.js      — village structures
+│       ├── Ruins.js          — dungeon props
+│       ├── Chests.js         — loot chests
+│       └── Portals.js        — area transition portals
+├── characters/
+│   ├── Player.js             — player controller
+│   ├── roles/
+│   │   ├── Magician.js
+│   │   ├── Swordsman.js
+│   │   ├── Archer.js
+│   │   └── Fighter.js
+│   ├── enemies/
+│   │   ├── EnemyBase.js      — base enemy class
+│   │   ├── EnemyAI.js        — pathfinding + behavior
+│   │   ├── normal/           — per-area normal enemies
+│   │   └── bosses/           — boss classes
+│   └── npcs/
+│       └── VillageNPC.js
+├── combat/
+│   ├── CombatSystem.js       — hit detection, damage calc
+│   ├── SkillSystem.js        — skill execution + cooldowns
+│   ├── ElementalSystem.js    — element reactions
+│   ├── StatusEffects.js      — burn, freeze, stun, etc
+│   └── ProjectileSystem.js   — arrows, spells, projectiles
+├── data/
+│   ├── skills.js             — all skill definitions
+│   ├── enemies.js            — enemy stats + behavior
+│   ├── equipment.js          — all equipment definitions
+│   ├── quests.js             — quest data
+│   ├── areas.js              — area configs
+│   ├── bosses.js             — boss data
+│   └── items.js              — consumables + materials
+├── context/
+│   ├── GameContext.jsx       — React UI state
+│   └── PlayerContext.jsx     — player stats bridge
+├── components/
+│   ├── HUD/
+│   │   ├── GameHUD.jsx       — master HUD
+│   │   ├── HealthBar.jsx     — HP/MP bars
+│   │   ├── SkillBar.jsx      — skill hotbar + cooldowns
+│   │   ├── BossBar.jsx       — boss HP bar cinematic
+│   │   ├── Minimap.jsx       — real-time minimap
+│   │   ├── Compass.jsx       — directional compass
+│   │   ├── QuestTracker.jsx  — active quest display
+│   │   ├── DamageNumbers.jsx — floating damage text
+│   │   ├── StatusIcons.jsx   — buffs/debuffs display
+│   │   └── DayCycleHUD.jsx   — time + weather display
+│   ├── Inventory/
+│   │   ├── Backpack.jsx      — full inventory screen
+│   │   ├── EquipmentSlots.jsx — equipment UI
+│   │   ├── ItemTooltip.jsx   — item detail popup
+│   │   └── CraftingPanel.jsx — crafting UI
+│   ├── Map/
+│   │   ├── WorldMap.jsx      — full world map
+│   │   └── AreaMap.jsx       — detailed area map
+│   ├── Quest/
+│   │   ├── QuestLog.jsx      — quest list
+│   │   └── QuestPopup.jsx    — new quest notification
+│   ├── RoleSelect/
+│   │   └── RoleSwitch.jsx    — role switcher UI
+│   └── Screens/
+│       ├── MainMenu.jsx
+│       ├── LoadingScreen.jsx
+│       ├── PauseMenu.jsx
+│       ├── DeathScreen.jsx   — respawn at checkpoint
+│       ├── BossIntro.jsx     — cinematic boss entrance
+│       ├── LevelUp.jsx       — level up screen
+│       └── Settings.jsx
+└── utils/
+    ├── math.js
+    ├── noise.js
+    ├── save.js
+    └── debug.js
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 8 — GAME STATE STRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const INITIAL_GAME_STATE = {
+  phase: 'menu',          // menu|loading|playing|paused|dead|cutscene|ended
+
+  player: {
+    name: 'Auren',
+    role: 'magician',     // magician|swordsman|archer|fighter
+    level: 1,
+    exp: 0,
+    expToNext: 100,
+    position: { x: 0, y: 2, z: 0 },
+    rotation: 0,
+
+    stats: {
+      hp: 100, maxHp: 100,
+      mp: 100, maxMp: 100,
+      atk: 15, def: 10,
+      spd: 5,  crit: 5,
+      critDmg: 150,        // percentage
+      elementBonus: {}     // { fire: 0, ice: 0, thunder: 0, ... }
+    },
+
+    skills: {
+      basic: null,         // basic attack (always available)
+      skill1: null,        // cooldown skill 1
+      skill2: null,        // cooldown skill 2
+      skill3: null,        // cooldown skill 3
+      elemental: null,     // elemental skill (medium cooldown)
+      ultimate: null,      // ultimate skill (long cooldown)
+      passive: null        // passive always active
+    },
+
+    cooldowns: {
+      skill1: 0, skill2: 0, skill3: 0,
+      elemental: 0, ultimate: 0
+    },
+
+    equipment: {
+      weapon: null,
+      armor: null,
+      helmet: null,
+      boots: null,
+      accessory1: null,
+      accessory2: null
+    },
+
+    inventory: [],         // array of item objects
+    materials: {},         // { material_id: count }
+    gold: 100,
+    shards: 0              // elemental shards collected
+  },
+
+  world: {
+    currentArea: 'greenfield_village',
+    unlockedAreas: ['greenfield_village'],
+    checkpoints: {},       // { area_id: { x, y, z } }
+    defeatedBosses: [],
+    completedQuests: [],
+    activeQuests: [],
+    discoveredLocations: [],
+    chestOpened: [],
+    time: {
+      hour: 8,             // 0-23
+      phase: 'morning',    // dawn|morning|afternoon|evening|night
+      totalSeconds: 0
+    },
+    weather: 'clear'
+  },
+
+  settings: {
+    masterVolume: 0.8,
+    musicVolume: 0.6,
+    sfxVolume: 0.8,
+    graphicsQuality: 'high',
+    showDamageNumbers: true,
+    showMinimap: true
+  }
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 9 — ELEMENTAL SYSTEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+7 ELEMENTS:
+  FIRE    (#ff6020) — burn DoT, melts ice
+  ICE     (#60d0ff) — slow, freeze on stack
+  THUNDER (#ffd020) — chain to nearby enemies, paralyze
+  WIND    (#80ff80) — knockback, clears fog/smoke
+  EARTH   (#c08040) — heavy stagger, defense buff
+  DARK    (#a020ff) — HP drain, curse
+  LIGHT   (#ffffff) — heal on hit, banish undead
+
+ELEMENTAL REACTIONS (when 2 elements combine):
+  FIRE + ICE       = STEAM BURST   — AoE knockback + blind
+  FIRE + THUNDER   = PLASMA        — true damage ignores DEF
+  FIRE + WIND      = FIRESTORM     — large AoE fire tornado
+  ICE + THUNDER    = BLIZZARD BOLT — frozen + paralyzed
+  ICE + WIND       = FROST GALE    — wide freeze cone
+  THUNDER + WIND   = STORM SURGE   — stun all nearby enemies
+  DARK + LIGHT     = ECLIPSE       — reality shatter, massive damage
+  DARK + FIRE      = HELLFIRE      — undead instant kill
+  LIGHT + ICE      = HOLY FROST    — heal self + freeze enemy
+  EARTH + FIRE     = MAGMA ERUPT   — terrain damage zone
+  EARTH + ICE      = PERMAFROST    — complete movement stop
+  EARTH + THUNDER  = QUAKE BOLT    — ground AoE + stun
+
+REACTION IMPLEMENTATION:
+  Each enemy tracks active elements (array, max 2)
+  When 2nd element applied: trigger reaction, clear elements
+  Reaction damage = (ATK * reactionMultiplier) + bonus
+  Visual: large particle burst + screen flash per reaction type
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1 COMPLETE — PROCEED TO REBIRTH_STEP_2_WORLD_AND_MAPS.txt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

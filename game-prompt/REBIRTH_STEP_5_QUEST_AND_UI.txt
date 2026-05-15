@@ -1,0 +1,710 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║   REBIRTH: THE MAGICIAN — STEP 5 of 6                                       ║
+║   QUEST SYSTEM, STORY, ALL UI COMPONENTS, NAVIGATION, HUD                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1 — QUEST SYSTEM (data/quests.js)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+QUEST DATA STRUCTURE:
+{
+  id: string,
+  type: 'main'|'side'|'daily',
+  title: string,
+  area: string,
+  giver: string,          // NPC id or 'system'
+  description: string,
+  objectives: [
+    {
+      id: string,
+      type: 'kill'|'collect'|'reach'|'talk'|'survive'|'boss',
+      target: string,     // enemy id / item id / position / npc id
+      count: number,
+      current: 0,
+      description: string,
+      markerPos: {x,y,z}  // compass/map marker position
+    }
+  ],
+  rewards: {
+    exp: number,
+    gold: number,
+    items: [],            // item ids
+    unlocks: []           // area ids / quest ids / abilities
+  },
+  prerequisite: string[],  // quest ids that must be completed first
+  lore: string             // story context text shown on accept
+}
+
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2 — MAIN QUEST LINE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MQ-01: THE REBIRTH
+  Area  : Greenfield Village
+  Giver : Elder Maren (auto-trigger on game start)
+  Lore  : "You died. Yet here you stand. The Spire's blood runs in
+           you — it would not let you perish. Find your footing.
+           This village needs protecting."
+  Objectives:
+    1. Talk to Elder Maren at the fountain
+    2. Defeat 5 Vine Crawlers north of village
+    3. Collect 3 Iron Shards from Stone Imps
+    4. Return to Elder Maren
+  Rewards: 200 EXP, 80 Gold, Health Potion x3, unlocks MQ-02
+
+MQ-02: THE EARTH SHARD
+  Area  : Greenfield Village
+  Giver : Elder Maren
+  Lore  : "The Earth Shard is held by an ancient Golem deep in the
+           northern clearing. Kraetos was once our guardian.
+           Valdris's corruption turned him into our prison warden."
+  Objectives:
+    1. Reach the Golem Arena (north clearing)
+    2. Defeat Elder Golem Kraetos
+    3. Collect the Earth Shard from the arena center
+  Rewards: 500 EXP, 150 Gold, Kraetos equipment piece,
+           unlocks Darkwood Forest, unlocks MQ-03
+
+MQ-03: INTO THE SHADOWS
+  Area  : Darkwood Forest
+  Giver : Wandering Scholar Fenwick (forest entrance)
+  Lore  : "The Dark Shard pulses somewhere deep in this forest.
+           I've been trying to reach it for months. Whatever
+           controls this forest does not want it found."
+  Objectives:
+    1. Find Fenwick's lost research camp (marker on map)
+    2. Survive the Bone Archer ambush (3 waves)
+    3. Locate the Dark Temple entrance
+    4. Defeat Shadowlord Vethis
+    5. Retrieve the Dark Shard
+  Rewards: 1500 EXP, 400 Gold, Vethis equipment piece,
+           unlocks Ashborne Desert, unlocks MQ-04
+
+MQ-04: FIRE AND ASH
+  Area  : Ashborne Desert
+  Giver : Desert Nomad Kira (oasis)
+  Lore  : "Pyraak's eruptions have been growing worse. The volcano
+           is not natural — the Fire Shard is supercharging it.
+           My people cannot survive many more eruptions."
+  Objectives:
+    1. Survive sandstorm crossing to volcano (special event)
+    2. Find the Flame Altar at volcano base
+    3. Defeat Ignis Titan Pyraak
+    4. Retrieve the Fire Shard before volcano fully erupts
+       (TIME LIMIT: 3 minutes after boss dies)
+  Rewards: 3000 EXP, 800 Gold, Pyraak equipment piece,
+           unlocks Frostpeak Mountains, unlocks MQ-05
+
+MQ-05: THE FROZEN THRONE
+  Area  : Frostpeak Mountains
+  Giver : Mountain Hermit Brynn (mountain base village)
+  Lore  : "Vorthys froze the entire peak 200 years ago. The Ice
+           Shard is in his belly — he swallowed it to keep it safe.
+           You'll have to kill a dragon. How determined are you?"
+  Objectives:
+    1. Find the Dragon's Lair (summit)
+    2. Survive Glacial Drake Vorthys Phase 1
+    3. Survive Phase 2 (airborne phase) — don't fall off arena
+    4. Defeat Vorthys final phase
+    5. Retrieve Ice Shard from dragon's remains
+  Rewards: 5000 EXP, 1500 Gold, Vorthys equipment piece,
+           unlocks Stormcoast Ruins, unlocks MQ-06
+
+MQ-06: THE BROKEN COAST
+  Area  : Stormcoast Ruins
+  Giver : Storm Survivor Aela (ruins entrance)
+  Lore  : "The Colossus was built by the ancients to HOLD the
+           Thunder and Wind Shards — keep them separate so they
+           couldn't cause a Storm Reaction that destroys continents.
+           Valdris wants both. Don't let him have them."
+  Objectives:
+    1. Cross the Great Bridge (avoid wind gusts, don't fall)
+    2. Activate 3 ancient pylons to weaken Zharkon
+    3. Defeat Tempest Colossus Zharkon
+    4. Retrieve BOTH Thunder Shard and Wind Shard
+    5. Escape ruins before full collapse (TIME LIMIT: 2 minutes)
+  Rewards: 8000 EXP, 2500 Gold, Zharkon equipment pieces (2),
+           unlocks Inferno Citadel, unlocks MQ-07
+
+MQ-07: THE UNDYING
+  Area  : Inferno Citadel
+  Giver : System (cinematic trigger)
+  Lore  : Full 1-minute cinematic plays:
+           Valdris speaks directly to player. He reveals:
+           He built all of this. The corrupted bosses were
+           his experiments. He wanted you to collect the shards.
+           He needed someone with Spire blood to carry them here.
+           "Thank you," he says. "You've done exactly what I needed."
+           Player realizes: all 6 shards, when together, unlock
+           Valdris's true immortality. Must destroy him NOW
+           before he absorbs the shards.
+  Objectives:
+    1. Fight through Citadel guards (3 waves)
+    2. Reach the Throne Room
+    3. Defeat Valdris Phase 1 — The Scholar
+    4. Survive Valdris Phase 2 — The Conqueror
+    5. Defeat Valdris Phase 3 — The Undying
+    6. FINAL CHOICE (at 1% HP):
+       A) Destroy all shards — Valdris dies, magic weakens
+       B) Absorb shards yourself — you become the new guardian
+       C) Shatter the shards into the world — magic returns to all
+  Rewards: Game completion, credits, 3 different endings based on choice
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3 — SIDE QUESTS (per area)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+GREENFIELD VILLAGE SIDE QUESTS:
+
+  SQ-GV-01: MISSING FARMER
+    Kill 8 Corrupted Deer terrorizing farm
+    Reward: 150 EXP, 60 Gold, Common Armor piece
+
+  SQ-GV-02: HERB COLLECTOR
+    Collect 5 Glowing Mushrooms from forest edge
+    Reward: 100 EXP, 40 Gold, 3x Mana Potion
+
+  SQ-GV-03: THE OLD BLACKSMITH
+    Bring 4x Iron Shard + 2x Magic Dust to blacksmith
+    Reward: 200 EXP, T2 weapon crafted for your role
+
+DARKWOOD FOREST SIDE QUESTS:
+
+  SQ-DF-01: CLEANSE THE DARKNESS
+    Destroy 5 Shadow Corruption nodes (glowing dark crystals)
+    Reward: 500 EXP, 200 Gold, Void Crystal x2
+
+  SQ-DF-02: FENWICK'S RESEARCH
+    Collect dark essence from 10 Shadow Stalkers
+    Reward: 600 EXP, rare material, lore document unlock
+
+  SQ-DF-03: LOST TRAVELER
+    Find and escort NPC from forest to exit (stealth/fight optional)
+    Reward: 400 EXP, 180 Gold, Accessory T2
+
+ASHBORNE DESERT SIDE QUESTS:
+
+  SQ-AD-01: OASIS DEFENSE
+    Survive 3 waves of Sand Scorpions at oasis
+    Reward: 800 EXP, 350 Gold, Fire Elemental Ore x3
+
+  SQ-AD-02: CARAVAN ESCORT
+    Escort merchant caravan through sandstorm to far side
+    Reward: 1000 EXP, 500 Gold, shop discount permanent +5%
+
+  SQ-AD-03: ANCIENT TOMB
+    Explore buried ruin, solve pressure-plate puzzle
+    Defeat the tomb guardian (elite enemy)
+    Reward: 1200 EXP, T3 equipment piece, Rare material x2
+
+FROSTPEAK MOUNTAINS SIDE QUESTS:
+
+  SQ-FM-01: FROZEN PEOPLE
+    Find 6 villagers frozen by Frost Wraiths, break their ice
+    (use Fire element skills to free them)
+    Reward: 1500 EXP, 600 Gold, Ice resistance accessory
+
+  SQ-FM-02: YETI HUNT
+    Track and defeat the legendary Yeti in the blizzard zone
+    Reward: 2000 EXP, 800 Gold, T4 equipment piece (rare)
+
+  SQ-FM-03: HOT SPRING QUEST
+    Restore flow to 3 blocked hot springs (puzzle)
+    Reward: 1200 EXP, permanent HP regen +2/sec
+
+STORMCOAST RUINS SIDE QUESTS:
+
+  SQ-SR-01: POWER THE PYLONS
+    Activate 5 ancient energy pylons before Zharkon disables them
+    (Timed challenge — 8 minutes)
+    Reward: 2500 EXP, 1000 Gold, Thunder Shard fragment x2
+
+  SQ-SR-02: SURVIVOR RESCUE
+    Find 4 survivors trapped in ruins, reach them before lightning
+    (navigating electrified floor puzzle)
+    Reward: 2000 EXP, 900 Gold, Rare material x3
+
+INFERNO CITADEL SIDE QUESTS:
+
+  SQ-IC-01: THE FALLEN KNIGHTS
+    Defeat 10 Void Knights guarding the outer citadel
+    Reward: 3000 EXP, 1500 Gold, T4 set piece
+
+  SQ-IC-02: VALDRIS'S HISTORY
+    Find 6 hidden lore tablets throughout citadel
+    (reveals full backstory — powerful emotional content)
+    Reward: 4000 EXP, 2000 Gold, unlock secret ending dialogue
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 4 — GAME HUD (components/HUD/GameHUD.jsx)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+LAYOUT:
+  TOP-LEFT      : HealthBar (HP + MP bars)
+  TOP-CENTER    : BossBar (visible only in boss fight)
+  TOP-RIGHT     : QuestTracker (active quest + objectives)
+  BOTTOM-LEFT   : SkillBar (all 7 skill slots + cooldowns)
+  BOTTOM-CENTER : Compass (directional + quest marker)
+  BOTTOM-RIGHT  : Minimap
+  CENTER-RIGHT  : StatusIcons (active buffs/debuffs)
+  FLOATING      : DamageNumbers (over enemies)
+  FLOATING      : DayCycleHUD (small, top area center)
+
+HP/MP BARS (components/HUD/HealthBar.jsx):
+  HP bar: full width 200px, height 14px
+  Color gradient: green #40ff60 → yellow #ffff00 → red #ff2020
+  Color changes based on HP percentage smoothly
+  MP bar: same width, height 10px, color #4080ff
+  Both bars have animated fill (smooth lerp, not instant)
+  Numbers shown: "247 / 350" format, JetBrains Mono font
+  Role icon (small) left of bars, role color border
+  HP gain: green flash on bar  HP loss: red flash + shake
+
+SKILL BAR (components/HUD/SkillBar.jsx):
+  7 slots horizontal, centered bottom screen
+  Slot layout: [Basic] [Q] [E] [R] [F] [T/X] [Passive]
+  Each slot:
+    64x64px box, dark background
+    Skill icon: geometric shape representing skill (canvas drawn)
+    Hotkey label: bottom-left corner (small)
+    Cooldown overlay: dark fill drains clockwise (CSS conic-gradient)
+    Cooldown timer: center number (seconds remaining)
+    MP cost: bottom-right tiny text
+    READY state: slight glow pulse on border
+    ON COOLDOWN: greyed out + cooldown fill
+    NOT ENOUGH MP: red border flash
+    Passive slot: always active, no cooldown, golden border
+
+SKILL ICON VISUALS (canvas drawn, no image files):
+  Fireball    : orange circle with flame lines
+  Ice Lance   : blue pointed shard shape
+  Thunder Chain: yellow zigzag lines
+  Arcane Vortex: purple spiral
+  Meteor Strike: red circle with impact lines (dramatic)
+  Shield Bash : blue square with impact star
+  Whirlwind   : cyan spinning lines
+  Counter Strike: white flash slash mark
+  Execution   : dark blade silhouette
+  Multi Shot  : 3 green arrows spread
+  Poison Arrow: dark arrow with drip
+  Rain of Arrows: arrows raining pattern
+  Sniper Eclipse: target reticle, dark
+  Ground Slam : orange fist + crack lines
+  Grab & Throw: hand + arc trajectory
+  Thunder Fist: fist with lightning bolt
+  Berserker   : flame + speed lines
+
+BOSS HP BAR (components/HUD/BossBar.jsx):
+  Only visible during boss fights
+  Slides in from top with animation when boss fight starts
+  Full width minus margins, centered
+  Height: 20px, thick, dramatic
+  Color: red #ff2020, dark red segments per phase
+  Phase markers: vertical lines at 60% and 30% HP
+  Boss name above bar: Cinzel font, large
+  Boss title: smaller italic beneath name
+  Phase transition: bar briefly flashes, new section activates
+  On death: bar shatters into particles, screen flash
+
+MINIMAP (components/HUD/Minimap.jsx):
+  160x160px, circular clip (round minimap)
+  Updates every 0.5s (not every frame)
+  Shows:
+    Player: white dot with direction arrow
+    Enemies: red dots (only visible ones)
+    Elite/Boss: larger red dot
+    Checkpoints: gold star
+    Quest objectives: yellow exclamation mark
+    Chests: small gold square
+    NPCs: blue dot
+    Portals: purple diamond
+  Rotate minimap with player direction (north always up option)
+  Fog of war: unexplored areas darkened
+  Zoom: scroll wheel on minimap to zoom in/out
+
+COMPASS (components/HUD/Compass.jsx):
+  Horizontal bar at bottom center, 300px wide
+  Shows N/S/E/W cardinal directions
+  Quest marker: gold triangle pointer on compass
+  Distance to quest objective: small text below compass
+  Multiple quest markers: different colored triangles
+  Enemy nearby indicator: red arc on compass edge
+
+QUEST TRACKER (components/HUD/QuestTracker.jsx):
+  Top-right, max 3 active quests shown
+  Each quest:
+    Quest name: Rajdhani bold, white
+    Active objective: smaller, slightly grey
+    Progress: "3/5 enemies" format
+    Checkmark appears when objective complete
+  Click quest to highlight on map (waypoint set)
+  Toggle show/hide: press M
+
+DAY CYCLE HUD (components/HUD/DayCycleHUD.jsx):
+  Small pill-shaped indicator top center
+  Shows: sun/moon icon + time phase name
+  "Morning" / "Afternoon" / "Evening" / "Night"
+  Color changes per phase (warm for day, cool for night)
+  Area name shown briefly when entering new area
+
+STATUS ICONS (components/HUD/StatusIcons.jsx):
+  Right side of screen, vertical stack
+  Each active buff/debuff: 32x32 icon + timer bar
+  Buff icons: golden border
+  Debuff icons: red border
+  Element icons use element color
+  Tooltip on hover: effect description
+
+DAMAGE NUMBERS (components/HUD/DamageNumbers.jsx):
+  Float up from hit position, fade + rise 1.2s
+  Normal: white, 16px
+  Crit: gold #ffd700, 22px, bold, "!" suffix
+  Element: element color, 18px
+  Reaction: large 26px, reaction name + damage
+  Heal: green, 16px, "+" prefix
+  Miss: grey, "MISS" text
+  Block: blue, "BLOCK" text
+  Max 25 simultaneous damage numbers
+  Use object pooling (reuse DOM elements)
+
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 5 — BACKPACK/INVENTORY (components/Inventory/Backpack.jsx)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Open: press B or Tab
+Full screen overlay, semi-transparent blurred background
+
+LEFT PANEL — CHARACTER:
+  3D character preview (mini Three.js canvas 200x350px)
+  Character rotates slowly, shows equipped items visually
+  Equipment slots arranged around character silhouette:
+    Top: Helmet slot
+    Chest: Armor slot
+    Left hand: Weapon / Shield slot
+    Right hand: Weapon slot
+    Feet: Boots slot
+    Bottom corners: Accessory 1, Accessory 2
+  Click slot: opens item selection from inventory
+  Slot highlight when hoverable: gold border
+
+  Below character: stat summary
+    HP / MP / ATK / DEF / SPD / CRIT
+    Show base + equipment bonus: "120 (+45)"
+    Color: green if buffed, red if debuffed vs previous equipment
+
+RIGHT PANEL — INVENTORY GRID:
+  6 columns x 8 rows = 48 slots
+  Each slot: item icon (canvas drawn) + quantity
+  Click item: shows ItemTooltip
+  Right click: context menu (Equip / Use / Dismantle / Drop)
+  Drag & drop: drag item to equipment slot to equip
+  Filter tabs: All / Weapons / Armor / Consumables / Materials
+  Sort button: by tier / by type / by level req
+  Max inventory: 48 items (expandable via Bag upgrade item)
+
+ITEM TOOLTIP (components/Inventory/ItemTooltip.jsx):
+  Appears on hover, positioned to not go off screen
+  Shows:
+    Item name (tier color)
+    Item type + role restriction
+    Equipment level: "Level VII" in roman numerals
+    Stats: each stat on own line with +/- vs equipped
+      Green text if better, red if worse
+    Special properties: gold text, each on own line
+    Set name: if part of set, shows set bonuses (dimmed)
+    Lore text: italic, muted color, bottom of tooltip
+    Level requirement: "Requires Level 25"
+  Compare mode: hold Shift to compare 2 items side by side
+
+CRAFTING PANEL (components/Inventory/CraftingPanel.jsx):
+  Tab within Backpack: "Crafting"
+  Shows all known recipes (discovered by finding materials)
+  Recipe list on left, details on right
+  Recipe details:
+    Result item (with preview)
+    Required materials: each material with have/need count
+      Grey if missing, green if have enough
+  Craft button: active only when all materials available
+  Enhancement section:
+    Select equipped item
+    Shows current level + cost to enhance
+    "ENHANCE" button with success rate displayed
+    Failure warning shown clearly
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6 — WORLD MAP (components/Map/WorldMap.jsx)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Open: press M
+Full screen canvas-drawn map
+
+MAP VISUAL:
+  Background: parchment texture (CSS + canvas noise)
+  Each area shown as distinct region with hand-drawn style
+  Unlocked areas: full color, detailed
+  Locked areas: dark silhouette with "???" label
+  Currently active area: highlighted with gold border
+
+PER-AREA MAP SHOWS:
+  Player position: animated gold dot
+  Checkpoints: star icons (activated = gold, unvisited = grey)
+  Quest objectives: exclamation mark / flag marker
+  Discovered locations: named labels
+  Bosses: skull icon (defeated = crossed out)
+  Portals: diamond icon
+  Chests: treasure chest icon (opened = faded)
+  NPCs: person icon
+
+MAP CONTROLS:
+  Scroll to zoom in/out
+  Click + drag to pan
+  Click area: shows area info panel (name, level range, season)
+  Click checkpoint: option to fast travel (if unlocked)
+  Click quest marker: sets as active quest target
+
+FAST TRAVEL:
+  Can fast travel between activated checkpoints
+  Cost: free if same area, 1x Teleport Stone if different area
+  Animation: map zooms into destination, loading transition
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 7 — ALL SCREEN COMPONENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MAIN MENU (components/Screens/MainMenu.jsx):
+  Background: live 3D scene of Greenfield Village at dawn
+  Auren stands in background, looks toward horizon
+  Aurora-like light plays in sky
+  Title: "REBIRTH" — Cinzel font, massive, center screen
+  Subtitle: "The Magician" — smaller, gold color
+  Buttons:
+    [New Journey]  — starts new game
+    [Continue]     — only if save exists
+    [Options]      — settings panel
+    [Credits]      — brief credits scroll
+  Ambient music: soft orchestral, hopeful melody
+  Particle effects: cherry blossoms drift across screen
+
+LOADING SCREEN (components/Screens/LoadingScreen.jsx):
+  Background: artwork relevant to area being loaded
+    (canvas-drawn stylized scene, not photo-realistic)
+  Area name: large Cinzel font center
+  Loading steps text (like NPC game):
+    "Carving the mountains..."
+    "Planting the forest..."
+    "Summoning the enemies..."
+    "Polishing the boss..."
+    "Aethermoor is ready."
+  Tip text: random gameplay tip at bottom
+  Progress bar: glowing gold line
+  Area lore quote: italic, faded, changes each load
+
+PAUSE MENU (components/Screens/PauseMenu.jsx):
+  Blur background, dark overlay
+  [Resume]
+  [Quest Log]   → opens quest log
+  [Map]         → opens world map
+  [Options]     → settings
+  [Save Game]
+  [Return to Menu]
+
+DEATH SCREEN (components/Screens/DeathScreen.jsx):
+  Screen slowly fades to dark red then black
+  Player death animation completes first
+  "YOU HAVE FALLEN" — Cinzel, large, dramatic
+  Fade in slowly (2 seconds delay)
+  Nearest checkpoint shown: area name + distance
+  Options (styled as stone tablet UI):
+    [Rise Again]       — respawn at checkpoint (free)
+    [Rise Here]        — respawn at death spot (costs 20% gold)
+  Stats shown:
+    "Enemies slain: X"
+    "Gold at death: X"
+    "Distance from checkpoint: X units"
+  Somber music plays softly
+
+LEVEL UP SCREEN (components/Screens/LevelUp.jsx):
+  Appears for 3 seconds, non-blocking (can still move)
+  Center screen, fades in/out
+  "LEVEL UP!" large text in gold
+  Level number: old → new (animated flip)
+  New stats listed briefly
+  If new skill unlocked: "NEW SKILL UNLOCKED: [name]"
+  Particle burst: gold + role color confetti
+
+BOSS INTRO (components/Screens/BossIntro.jsx):
+  Triggered when entering boss arena
+  Letterbox bars animate in (top + bottom black bars)
+  Camera cuts to cinematic angle (GameEngine handles)
+  Boss name appears: large Cinzel, centered
+    Animation: letters appear one by one
+  Boss title beneath name: smaller italic
+  Example: "ELDER GOLEM KRAETOS"
+             "Warden of the Greenfields"
+  HP bar slides in from top
+  Letterbox bars retract
+  Player control returns
+  Duration: 3 seconds total
+
+QUEST POPUP (components/Quest/QuestPopup.jsx):
+  Appears top-left when quest accepted/completed
+  Slides in from left, stays 3 seconds, slides out
+  Quest accept: blue border, "NEW QUEST" header
+  Quest complete: gold border, "QUEST COMPLETE" header
+  Quest name + EXP/Gold rewards shown
+  Completion: fanfare sound
+
+ROLE SWITCH UI (components/RoleSelect/RoleSwitch.jsx):
+  Opens at Role Shrine or camp
+  4 role cards arranged in 2x2 grid
+  Each card:
+    Role name (Cinzel font)
+    Role icon (large, role color)
+    Brief description
+    Current stats if active role
+    "SWITCH" button (inactive on current role)
+  Role color glow on card border
+  Confirmation dialog before switching
+
+NPC DIALOGUE (components/Dialogue/NPCDialogue.jsx):
+  Classic RPG style bottom dialogue box
+  Speaker name: top left of box, role color
+  Text: typewriter animation, 30ms/char
+  Speaker portrait: geometric avatar (no photorealistic)
+  Click or E to advance
+  Choices appear as numbered options [1][2][3]
+  Quest-giving NPCs: gold exclamation mark above head in world
+
+SETTINGS SCREEN (components/Screens/Settings.jsx):
+  GRAPHICS:
+    Resolution quality: Low/Medium/High/Ultra
+    Shadow quality: Off/Low/High
+    Particle effects: Off/Low/High
+    Post-processing: Off/On
+    Bloom: toggle
+    Motion blur: toggle (On by default for combat)
+    Draw distance: Short/Medium/Far
+
+  AUDIO:
+    Master volume: slider 0-100
+    Music volume: slider 0-100
+    SFX volume: slider 0-100
+    Ambient volume: slider 0-100
+
+  GAMEPLAY:
+    Damage numbers: toggle
+    Minimap rotation: toggle (rotate vs fixed north)
+    Enemy HP bars: Always/Combat Only/Off
+    Autosave: toggle
+    Enemy respawn on death: toggle
+    Aim sensitivity: slider
+
+  CONTROLS:
+    Shows all keybinds (read-only for now)
+
+  All settings save to localStorage "rebirth_settings_v1"
+  Apply immediately, no restart needed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 8 — NAVIGATION SYSTEMS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WAYPOINT SYSTEM:
+  Player can set a waypoint on world map or minimap
+  Waypoint shown as golden beacon in 3D world
+    Tall vertical line of light, visible from far
+    Pulses slowly
+  Compass shows direction + distance to waypoint
+  Auto-waypoint: accepting quest sets waypoint on objective
+  Cancel waypoint: click current waypoint on map
+
+INTERACTION SYSTEM:
+  Raycast from camera center, range 3 units
+  Highlight interactive objects with outline shader
+    White outline for items/objects
+    Gold outline for NPCs
+    Green outline for chests
+    Purple outline for portals
+  Context prompt: "[E] — Open Chest" center-bottom screen
+  Interaction objects:
+    Chests: open animation + loot popup
+    NPCs: dialogue opens
+    Portals: area transition with confirmation
+    Checkpoints: auto-activate on approach
+    Role Shrines: opens RoleSwitch UI
+    Lore Tablets: text popup with story content
+    Hot springs: auto-heal when standing in them
+
+ENEMY HEALTH BARS (in-world, not HUD):
+  Small bar above each enemy head
+  Appears when enemy takes damage or player is close
+  Color: enemy element color → red at low HP
+  Boss health bar is separate (top of screen, dramatic)
+
+PORTAL TRANSITION:
+  Player walks into portal → confirmation prompt
+  "Enter [Area Name]? (Recommended Level: X)"
+  Confirm: cinematic fade out
+  Area name displayed large while loading
+  Fade in at spawn point of new area
+
+AREA ENTRY NOTIFICATION:
+  Large area name fades in center-screen when entering new area
+  "DARKWOOD FOREST" — Cinzel, large, white
+  Area level range beneath: "Recommended: Level 10-25"
+  Season indicator: spring/summer/autumn/winter icon
+  Fades after 3 seconds
+  Area-specific music crossfades in over 5 seconds
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 9 — 3 GAME ENDINGS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ENDING A — THE DESTROYER (Destroy all shards)
+  Auren destroys all 6 shards in a massive explosion
+  Valdris dies. Magic fades from the world slowly.
+  World is safe. But the wonder is gone.
+  Post-game world: grey and quiet, no more glowing creatures
+  Final scene: Auren walks away from the citadel alone
+  Text: "The world was saved. The price was everything magical."
+        "You chose safety over wonder."
+        "Aethermoor will remember neither you nor Valdris."
+        "It will simply continue."
+
+ENDING B — THE GUARDIAN (Absorb shards)
+  Auren absorbs all 6 shards
+  Becomes the new Arcane Spire guardian
+  Immense power — and immense loneliness
+  Final scene: Auren stands atop rebuilt Spire, watching over world
+  Text: "You became what Valdris could not."
+        "Not a tyrant. A guardian."
+        "The burden is infinite."
+        "But so is the view."
+  Secret note: this is how Valdris started. Will you be different?
+
+ENDING C — THE REBIRTH (Shatter shards into world)
+  Shards shatter, magic returns to ALL living beings
+  Every person, creature, plant gets a fragment of power
+  World transformed — magical and unpredictable
+  Valdris dissolves laughing: "...Chaos. Perfect."
+  Final scene: world transformed, colorful, chaotic, beautiful
+  Text: "You gave it all away."
+        "The magic belongs to everyone now."
+        "Or to no one."
+        "Either way — it is no longer yours to protect."
+        "That might be the bravest thing anyone has ever done."
+
+CREDITS: Scrolling credits over area montage footage (3D scenes)
+New Game+: unlocks after any ending
+  Keep: level, equipment, skills
+  Scale: all enemies +50% HP/ATK
+  New: secret area unlocks, additional Valdris backstory
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 5 COMPLETE — PROCEED TO REBIRTH_STEP_6_POLISH_AND_BUILD.txt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

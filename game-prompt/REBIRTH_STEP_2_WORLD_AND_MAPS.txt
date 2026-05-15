@@ -1,0 +1,650 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║   REBIRTH: THE MAGICIAN — STEP 2 of 6                                       ║
+║   WORLD BUILDING, 6 AREAS, TERRAIN, SKY, DAY CYCLE, SEASONS, WEATHER       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1 — WORLD OVERVIEW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Each area is a SEPARATE SCENE loaded on transition.
+No single giant open world — each area is 800x800 units.
+Transition via PORTAL objects at area edges.
+Each area has:
+  - Unique terrain heightmap (SimplexNoise)
+  - Unique color palette + fog color
+  - Unique ambient particles
+  - Unique season (static per area, affects visuals)
+  - Unique day/night cycle speed
+  - Unique weather pattern
+  - 1 Boss arena (sealed off until player is ready)
+  - 2-4 Checkpoints (respawn + fast travel points)
+  - Scattered chests (5-10 per area)
+  - Enemy spawn zones
+  - 1-2 Side quest NPCs
+  - Portal to next area (locked until boss defeated)
+
+AREA UNLOCK ORDER:
+  1. Greenfield Village   — always unlocked (tutorial)
+  2. Darkwood Forest      — unlocked after Greenfield boss
+  3. Ashborne Desert      — unlocked after Darkwood boss
+  4. Frostpeak Mountains  — unlocked after Ashborne boss
+  5. Stormcoast Ruins     — unlocked after Frostpeak boss
+  6. Inferno Citadel      — unlocked after ALL 5 bosses
+
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2 — AREA 1: GREENFIELD VILLAGE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ID            : greenfield_village
+SEASON        : Spring
+RECOMMENDED LEVEL: 1-10
+BOSS          : Elder Golem Kraetos (Earth element)
+MUSIC THEME   : Soft orchestral, hopeful
+
+TERRAIN:
+  - Gentle rolling hills, flat village center
+  - HeightMap: PlaneGeometry(800,800,128,128)
+  - noise2D(x*0.004, z*0.004) * 12 (gentle hills)
+  - Flat zone: radius 100 from origin (village center)
+  - Vertex colors:
+      Flat:  #6db87a (bright spring green)
+      Hills: #4a9e5c (medium green)
+      High:  #8db87a (pale green)
+  - Terrain collider: HeightfieldShape matching geometry
+  - receiveShadow = true
+
+VILLAGE CENTER (0,0,0):
+  - 8 procedural houses (BoxGeometry walls + ConeGeometry roofs)
+  - 1 blacksmith (open forge, sparks particle system)
+  - 1 item shop NPC (sells potions + beginner gear)
+  - 1 quest giver NPC (Elder Maren)
+  - Town fountain: CylinderGeometry tiers, animated water
+  - Notice board with active quests
+  - Role-switch shrine: glowing stone pillar, interact to change role
+
+CHECKPOINTS:
+  CP1: Village center (0, 0, 0) — always active, spawn point
+  CP2: Forest edge north (0, 0, 350)
+  CP3: Golem arena entrance (200, 10, 380)
+
+ENVIRONMENT:
+  - 800 spring trees (cherry blossom style)
+    Trunk: CylinderGeometry, brown #5c3d1e
+    Canopy: SphereGeometry clusters, pink #ffb7c5 / white #fff0f5
+  - 2000 flower instances (tiny PlaneGeometry, colorful)
+  - Butterflies: 20 small PlaneGeometry sprites, flutter animation
+  - Tall grass: InstancedMesh 30,000 blades, wind sway shader
+  - River: flows east-west through village, WaterSystem shader
+  - Fireflies at night: 100 small PointLight + geometry, float slowly
+
+AMBIENT PARTICLES:
+  - Cherry blossom petals: 200 PlaneGeometry, drift down slowly
+  - Speed: 0.5-1.5 units/sec, random horizontal drift
+  - Color: #ffb7c5, transparent, rotate slowly
+  - Spawn at y=20, reset at y=-2
+
+SKY:
+  - Spring sky: soft blue #87ceeb gradient
+  - Fluffy white clouds: merged SphereGeometry, 15 clouds
+  - Clouds drift slowly east at 2 units/sec
+  - Night: bright full moon (SpotLight + glowing sphere)
+  - Stars: 2000 Points on sphere radius 700, visible at night
+
+FOG:
+  - Day:   FogExp2(#c8e8d0, 0.0012)
+  - Night: FogExp2(#0a1a14, 0.0018)
+
+WEATHER: 30% chance light rain (gentle, no storm)
+
+ENEMIES:
+  - Vine Crawler    (Earth, level 1-3, slow, tangles feet)
+  - Stone Imp       (Earth, level 2-5, throws rocks)
+  - Forest Sprite   (Wind, level 3-6, fast, annoying)
+  - Corrupted Deer  (Dark, level 5-8, charges, has antlers)
+
+BOSS ARENA: 
+  - Circular clearing 80 units radius
+  - Stone ring border (BoxGeometry pillars)
+  - Sealed by magic barrier until player enters
+  - Boss: Elder Golem Kraetos — see STEP 3 for full boss data
+
+LOOT CHEST LOCATIONS (6 chests):
+  (-150, 2, 100), (200, 5, -80), (-80, 3, 300),
+  (300, 8, 200), (-300, 6, -150), (100, 4, 380)
+
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3 — AREA 2: DARKWOOD FOREST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ID            : darkwood_forest
+SEASON        : Autumn
+RECOMMENDED LEVEL: 10-25
+BOSS          : Shadowlord Vethis (Dark element)
+MUSIC THEME   : Tense, eerie strings, low drums
+
+TERRAIN:
+  - Dense forest, uneven ground, hidden paths
+  - noise2D(x*0.006, z*0.006) * 20 + noise2D(x*0.02, z*0.02) * 5
+  - Vertex colors:
+      Low:   #2d4a1e (dark forest green)
+      Mid:   #1a3010 (very dark green)
+      High:  #4a3520 (dark brown roots)
+  - Many large root formations (BoxGeometry clusters, raised ground)
+
+ENVIRONMENT:
+  - 1500 dark trees (huge, twisted trunks)
+    Trunk: CylinderGeometry radius 0.8-1.5, height 10-18, dark brown
+    Branches: multiple CylinderGeometry at angles
+    Canopy: dark orange/red #8b3a0f, #c4622a (autumn colors)
+  - Dead leaves: 500 PlaneGeometry instances, scattered on ground
+  - Falling leaves: 150 animated PlaneGeometry, slow spiral fall
+  - Mushrooms: CylinderGeometry stem + SphereGeometry cap
+    Glowing mushrooms: emissive blue/purple at night
+  - Cobwebs in tree corners: thin LineGeometry patterns
+  - Fog patches: local FogExp2 zones, very dense in clearings
+
+AMBIENT PARTICLES:
+  - Dark spores: 300 tiny spheres, float upward slowly, purple tint
+  - Wisp lights: 15 small PointLight orbs, drift between trees
+    Color: #6040ff, intensity 0.5, range 4, random path
+
+SKY:
+  - Heavy overcast: dark grey #2a2a2a, minimal light
+  - Visible moon through clouds at night: dramatic rays
+  - No stars visible (too overcast)
+  - Night is BRIGHT here — moonlight filters through canopy
+
+FOG:
+  - Day:   FogExp2(#1a2a15, 0.003) — very thick
+  - Night: FogExp2(#0a0a20, 0.004) — thick purple dark
+
+WEATHER: 60% chance heavy fog, 20% chance light rain
+
+CHECKPOINTS:
+  CP1: Forest entrance south (0, 0, -350)
+  CP2: Ancient tree clearing (0, 5, 0)
+  CP3: Dark temple entrance (100, 8, 300)
+
+ENEMIES:
+  - Shadow Stalker  (Dark, level 10-15, turns invisible, ambushes)
+  - Cursed Treant   (Dark+Earth, level 12-18, massive, slow)
+  - Nightmare Bat   (Dark, level 11-16, swarm attack)
+  - Bone Archer     (Dark, level 14-20, ranged, poisoned arrows)
+  - Soul Wisp       (Dark, level 15-22, splits on death)
+
+SPECIAL MECHANIC: DARKNESS ZONES
+  Certain areas have 0 ambient light
+  Player needs Light element active to see
+  Enemies in darkness get +50% damage
+  Light elemental skills create temporary light zones
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 4 — AREA 3: ASHBORNE DESERT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ID            : ashborne_desert
+SEASON        : Summer (extreme)
+RECOMMENDED LEVEL: 25-40
+BOSS          : Ignis Titan Pyraak (Fire element)
+MUSIC THEME   : Middle-eastern, intense percussion
+
+TERRAIN:
+  - Sandy dunes, rocky outcrops, ruins buried in sand
+  - noise2D(x*0.005, z*0.005) * 25 (large dunes)
+  - noise2D(x*0.015, z*0.015) * 8 (ripple detail)
+  - Vertex colors:
+      Sand:  #d4a853 (golden sand)
+      Dune:  #c4904a (darker sand)
+      Rock:  #8b6a3a (rocky areas)
+      Ash:   #6a5040 (near volcano, grey-red)
+
+ENVIRONMENT:
+  - Sand dunes: large smooth terrain waves
+  - Rock formations: BoxGeometry + CylinderGeometry clusters
+    Color: #8b6a3a to #6a4a2a
+  - Dead trees: bare trunk + few bare branches, bleached white
+  - Buried ruins: partially visible BoxGeometry stone structures
+  - Oasis (center): small water pool, 3 palm trees
+    Palm trunk: CylinderGeometry, tapered
+    Palm leaves: PlaneGeometry fan arrangement, bright green
+  - Volcano (north): cone shape, glowing lava at top
+    Lava glow: PointLight #ff4400, intensity 3, distance 100
+    Smoke: grey particles drifting upward constantly
+
+AMBIENT PARTICLES:
+  - Sand particles: 500 tiny spheres, blow horizontally
+  - Embers from volcano: 80 orange particles, float upward
+  - Heat shimmer: vertex displacement shader on distant geometry
+
+SKY:
+  - Blazing yellow-orange sky #ff9900 → #ff6600 at horizon
+  - Intense sun: bright DirectionalLight, hard shadows
+  - Night: crystal clear, stars very bright, cool blue moon
+  - Milky Way: 5000 tiny Points in arc formation, night only
+
+FOG:
+  - Day:   FogExp2(#e0a840, 0.0015) — golden haze
+  - Night: FogExp2(#05081a, 0.0008) — clear night
+  - Sandstorm: FogExp2(#c09050, 0.01) — near zero visibility
+
+WEATHER: 40% chance sandstorm (particles + reduced visibility)
+
+SPECIAL MECHANIC: HEAT DAMAGE
+  Outside shade: player takes 2 HP/sec heat damage
+  Shade zones (under rocks/ruins): no heat damage
+  Water flask consumable: negates heat for 60 seconds
+  Night time: no heat damage
+
+CHECKPOINTS:
+  CP1: Desert entrance (0, 2, -360)
+  CP2: Oasis center (0, 1, 0)
+  CP3: Volcano base (0, 15, 350)
+
+ENEMIES:
+  - Sand Scorpion   (Earth+Fire, level 25-30, burrows underground)
+  - Fire Djinn      (Fire, level 28-35, hovers, fireball spam)
+  - Lava Golem      (Fire+Earth, level 30-38, slow, massive AoE)
+  - Desert Wraith   (Fire+Dark, level 32-40, fast, teleports)
+  - Sandstorm Rider (Wind+Fire, level 35-42, only spawns in storms)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 5 — AREA 4: FROSTPEAK MOUNTAINS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ID            : frostpeak_mountains
+SEASON        : Winter
+RECOMMENDED LEVEL: 40-60
+BOSS          : Glacial Drake Vorthys (Ice element)
+MUSIC THEME   : Epic choir, heavy orchestra, cold
+
+TERRAIN:
+  - Dramatic mountain peaks, deep valleys, ice cliffs
+  - noise2D(x*0.003, z*0.003) * 60 (massive mountains)
+  - noise2D(x*0.01,  z*0.01)  * 15 (rocky detail)
+  - HIGH CLIFFS: sudden drops, player can fall off
+  - Ledge paths: narrow BoxGeometry walkways on cliff faces
+  - Vertex colors:
+      Low:   #7a9a8a (dark rocky snow)
+      Mid:   #c8d8e0 (snowy grey)
+      High:  #ffffff (pure snow peaks)
+      Ice:   #a0d0e8 (glacial blue ice faces)
+
+ENVIRONMENT:
+  - Pine trees (lower elevations only, z < 100):
+    Dark green #1a3a1a, conical shape, snow on branches
+    Snow: white PlaneGeometry caps on branch tips
+  - Ice formations: custom IceCrystalGeometry
+    Build from 5-8 BoxGeometry at angles, scale varied
+    Material: MeshStandardMaterial, transparent, blue tint
+    emissive: #4080ff, emissiveIntensity: 0.2
+  - Frozen lake (center flat area):
+    PlaneGeometry, IceMaterial shader
+    Reflective, slight blue tint, cracks pattern texture (canvas)
+  - Avalanche zones: marked areas where snow falls
+    Snow: 200 white SphereGeometry, fall animation trigger
+
+AMBIENT PARTICLES:
+  - Snowfall: 3000 white Points, drift downward
+    Speed: 2-4 units/sec, slight horizontal sway
+  - Ice crystal sparkles: 100 tiny bright Points, float
+  - Breath mist: particle cone from player mouth (cold visual)
+
+SKY:
+  - Pale blue-grey #b0c8d8, heavy with snow clouds
+  - Aurora Borealis at night:
+    3 wide PlaneGeometry with sine wave vertex shader
+    Colors: green #00ff80, purple #8040ff, cyan #40ffff
+    Slow wave animation, visible only at night, stunning effect
+  - Moon: large, bright, reflects off snow
+
+FOG:
+  - Day:   FogExp2(#c8d8e0, 0.002)
+  - Night: FogExp2(#080c14, 0.0025)
+  - Blizzard: FogExp2(#d0e0f0, 0.012) — whiteout
+
+WEATHER: 50% snowfall, 20% blizzard
+
+SPECIAL MECHANIC: ICE PHYSICS
+  Frozen lake: player slides (reduced friction)
+  cannon-es: material.friction = 0.05 on ice bodies
+  Ice bridges: can be broken by heavy attacks (Earth/Fire)
+  When broken: BoxGeometry falls, player can fall
+
+SPECIAL MECHANIC: COLD DAMAGE
+  High altitude (y > 40): slow HP drain
+  Warm cloak item negates this
+  Hot springs (scattered): standing in them heals HP
+
+CHECKPOINTS:
+  CP1: Mountain base village (-100, 5, -320)
+  CP2: Frozen lake shore (0, 8, 0)
+  CP3: Dragon's Lair entrance (0, 55, 380)
+
+ENEMIES:
+  - Frost Wolf      (Ice, level 40-48, pack hunter, howls to call pack)
+  - Ice Golem       (Ice+Earth, level 42-50, immune to Ice)
+  - Yeti            (Ice, level 45-55, rare, massive, rage mode)
+  - Frost Wraith    (Ice+Dark, level 48-58, phase through walls)
+  - Glacial Serpent (Ice, level 52-62, ambushes from under snow)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6 — AREA 5: STORMCOAST RUINS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ID            : stormcoast_ruins
+SEASON        : Stormy (eternal)
+RECOMMENDED LEVEL: 60-80
+BOSS          : Tempest Colossus Zharkon (Thunder+Wind)
+MUSIC THEME   : Dramatic, urgent, electric
+
+TERRAIN:
+  - Coastal cliffs, ruins of ancient civilization, electrified water
+  - noise2D(x*0.005, z*0.005) * 30
+  - Cliff edges drop to churning sea (instant death zone below)
+  - Raised ruins platforms: BoxGeometry slabs at varied heights
+  - Ancient columns: CylinderGeometry, some broken, scattered
+  - Vertex colors:
+      Cliff:  #5a5a6a (dark grey stone)
+      Ruins:  #6a6a7a (lighter stone)
+      Beach:  #8a8070 (dark sand)
+      Water:  animated shader (see WaterSystem)
+
+ENVIRONMENT:
+  - Ancient stone ruins: arches, walls, towers (partial)
+  - Crumbling bridges between platforms
+  - Electric arc between broken pillars: LineGeometry, animated
+    PointLight #ffd020, rapid flicker
+  - Ocean below cliffs: animated WaterSystem, stormy state
+    Waves: large amplitude sin waves, foam particles
+  - Floating debris: BoxGeometry pieces, slow rotation
+  - Lightning rods: tall metal spires on ruins
+
+AMBIENT PARTICLES:
+  - Rain: 5000 Points, heavy downpour, diagonal (wind effect)
+  - Lightning: random bright flashes (ambient DirectionalLight spike)
+    Every 8-15 seconds: intensity 0-10 spike for 0.1 seconds
+  - Thunder sound: 0.5-1 second after lightning flash
+  - Electrical sparks on ruins: tiny bright Points near metal objects
+  - Sea spray: white particles at cliff edges
+
+SKY:
+  - Permanent dark storm clouds #1a1a2a
+  - Continuous lightning in clouds (light flicker effect)
+  - No visible moon (too cloudy)
+  - Eerie green-yellow sky glow from electricity
+  - Day barely distinguishable from night (just slightly lighter)
+
+FOG:
+  - Always: FogExp2(#1a1a2a, 0.004) — dark and heavy
+
+WEATHER: Always stormy (no variation)
+
+SPECIAL MECHANIC: ELECTRIFIED WATER
+  Standing water on ground: conducts electricity
+  Thunder element attacks electrify water pools
+  Enemies standing in electrified water: stunned + DoT
+  Player standing in electrified water: same effect
+
+SPECIAL MECHANIC: WIND GUSTS
+  Random strong wind every 30-60 seconds
+  Player pushed in gust direction (physics impulse)
+  Can be blocked by standing behind walls
+  Small enemies get knocked back by gusts
+
+CHECKPOINTS:
+  CP1: Ruins entrance (0, 8, -350)
+  CP2: Great Bridge midpoint (0, 20, 0)
+  CP3: Colossus Arena platform (0, 35, 350)
+
+ENEMIES:
+  - Storm Elemental  (Thunder+Wind, level 60-70, floats, chain lightning)
+  - Ruin Guardian    (Earth+Thunder, level 62-72, ancient construct)
+  - Tempest Harpy    (Wind, level 65-75, dive bomb, steals items)
+  - Thunder Drake    (Thunder, level 68-78, flies, area lightning)
+  - Tidal Revenant   (Water+Dark, level 70-80, rises from sea)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 7 — AREA 6: INFERNO CITADEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ID            : inferno_citadel
+SEASON        : Apocalyptic (no season)
+RECOMMENDED LEVEL: 80-100
+BOSS          : Valdris The Undying (All elements, final boss)
+MUSIC THEME   : Full orchestra + choir, epic, world-ending
+
+TERRAIN:
+  - Floating obsidian platforms above sea of lava
+  - No traditional terrain — platforms are BoxGeometry + custom shapes
+  - Platforms connected by bridges (narrow BoxGeometry)
+  - Lava sea below: animated lava shader
+    Color: #ff3300 → #ff8800, glowing, animated surface
+    PointLight array underneath: orange-red, flicker
+  - Main citadel: massive dark fortress at center
+
+CITADEL STRUCTURE:
+  - Outer walls: tall BoxGeometry, #1a1020 (dark obsidian)
+  - 4 towers: CylinderGeometry, taller than walls
+  - Glowing runes on walls: PlaneGeometry, purple emissive
+  - Gates: open when player arrives (animation)
+  - Throne room (final area): circular, 100 unit radius
+    Ceiling: high vaulted, dark
+    Valdris throne: elaborate BoxGeometry sculpture
+    Shards embedded in walls: glowing elemental colors
+
+ENVIRONMENT:
+  - Lava flows: animated river paths on platforms
+  - Dark crystals: custom geometry, purple/black, sharp
+  - Skull piles: small BoxGeometry clusters (detail)
+  - Chains: TubeGeometry along CatmullRom curves, hanging
+  - Fire pillars: tall thin CylinderGeometry, fire particle top
+  - Corruption tendrils: animated snake-like TubeGeometry
+
+AMBIENT PARTICLES:
+  - Ash: 1000 grey particles, constant fall
+  - Fire embers: 500 orange particles, float upward
+  - Dark energy: 200 purple particles, orbit citadel
+  - Reality cracks: thin PlaneGeometry with emissive shader
+    Appear/disappear randomly, dark purple energy
+
+SKY:
+  - Red-black sky #1a0505, no clouds, just smoke
+  - Massive dark moon, blood-red tint
+  - Stars barely visible through smoke
+  - Aurora of dark energy: purple/red waves
+  - Lightning: constant in far background
+
+FOG:
+  - Always: FogExp2(#1a0505, 0.003) — red-black
+
+WEATHER: Constant ash fall + fire particles
+
+CHECKPOINTS:
+  CP1: Citadel entrance bridge (0, 20, -380)
+  CP2: Inner courtyard (0, 25, 0)
+  CP3: Throne room door (0, 30, 350) — NO RESPAWN after Valdris starts
+
+ENEMIES:
+  - Void Knight     (Dark+Fire, level 80-90, elite, all resistances)
+  - Corruption Mage (Dark, level 82-92, counter-spells player)
+  - Undead Colossus (Dark+Earth, level 85-95, immune to stun)
+  - Valdris Shade   (All, level 88-98, clone of Valdris, 50% stats)
+  - Inferno Seraph  (Fire+Light, level 90-100, fallen angel form)
+
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 8 — ENGINE/SCENEMANAGER.JS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SceneManager handles loading and unloading areas.
+Never load two areas simultaneously.
+Always dispose previous area before loading next.
+
+class SceneManager {
+  constructor(renderer, physics, onProgress) {}
+
+  async loadArea(areaId)
+    1. Show loading screen with area artwork
+    2. Unload current area (dispose all geometry/materials/lights)
+    3. physics.reset() — clear all bodies
+    4. Import area module dynamically: await import(`../world/areas/${areaId}.js`)
+    5. area.build(scene, physics, onProgress)
+    6. Place player at area checkpoint or default spawn
+    7. Start ambient audio for area
+    8. Fade in from black (2 second transition)
+    9. Emit 'area:loaded' event
+
+  unloadArea()
+    scene.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose()
+      if (obj.material) {
+        if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose())
+        else obj.material.dispose()
+      }
+    })
+    while(scene.children.length > 0) scene.remove(scene.children[0])
+    renderer.renderLists.dispose()
+
+  getSpawnPosition(areaId, checkpointId)
+    Return saved checkpoint position or area default spawn
+
+AREA MODULE INTERFACE (each area must export):
+  export async function build(scene, physics, onProgress) {}
+  export function update(delta, time) {}
+  export function dispose() {}
+  export const config = {
+    id, name, season, recommendedLevel,
+    spawnPosition, checkpoints, portalPositions,
+    ambientLight, fogColor, fogDensity,
+    musicTrack, ambientSounds
+  }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 9 — WORLD/ENVIRONMENT/DAYCYCLE.JS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Real time: 1 game hour = 60 real seconds
+Full day cycle: 24 game hours = 24 real minutes
+
+TIME PHASES:
+  Dawn      (05:00-07:00): warm orange-pink, low sun
+  Morning   (07:00-12:00): bright yellow, high sun
+  Afternoon (12:00-17:00): bright white, overhead sun
+  Evening   (17:00-20:00): golden-orange, sunset
+  Night     (20:00-05:00): dark blue-silver, moon + stars
+
+SUN MOVEMENT:
+  angle = (hour / 24) * Math.PI * 2 - Math.PI/2
+  sun.position.x = Math.cos(angle) * 500
+  sun.position.y = Math.sin(angle) * 400
+  sun.position.z = -100
+
+MOON (night only):
+  Opposite to sun position
+  Separate DirectionalLight, intensity 0.4, color #b0c8ff
+  Visible moon mesh: SphereGeometry(8), emissive white
+  Position: 600 units away in direction opposite sun
+  Creates dramatic shadows at night
+
+STARS (night only):
+  2000 Points, random on sphere radius 700
+  Fade in at evening, fade out at dawn
+  Slight twinkle: random opacity fluctuation
+
+AURORA BOREALIS (Frostpeak only, night only):
+  3 PlaneGeometry(200, 80), rotated facing camera
+  Custom ShaderMaterial:
+    Vertex: sine wave displacement (time uniform)
+    Fragment: gradient color + alpha based on position
+  Colors: #00ff80, #8040ff, #40ffff
+  Slowly shifts colors over time
+
+LIGHTING PER PHASE:
+  Dawn:      ambient #442211 0.3, sun #ff8833 0.6, exposure 0.7
+  Morning:   ambient #334455 0.5, sun #fffaee 1.2, exposure 1.0
+  Afternoon: ambient #445566 0.6, sun #ffffff 1.5, exposure 1.1
+  Evening:   ambient #442200 0.4, sun #ff6600 0.8, exposure 0.8
+  Night:     ambient #111133 0.2, moon #b0c8ff 0.4, exposure 0.3
+
+Smooth lerp between phases: factor 0.005 per frame
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 10 — TERRAIN COLLISION (CRITICAL — NO FALL THROUGH)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+THIS IS CRITICAL. Player must NEVER fall through terrain.
+
+METHOD: Heightmap-based position correction (NOT physics mesh)
+Reason: cannon-es heightfield can have edge cases. Use direct
+        heightmap sampling for player ground snapping instead.
+
+IMPLEMENTATION in world/terrain/TerrainCollider.js:
+
+class TerrainCollider {
+  constructor(heightData, size, segments) {
+    this.heightData = heightData  // Float32Array of height values
+    this.size = size              // world size (e.g. 800)
+    this.segments = segments      // grid resolution (e.g. 128)
+  }
+
+  getHeightAt(x, z) {
+    // Convert world coords to heightmap indices
+    const halfSize = this.size / 2
+    const fx = (x + halfSize) / this.size * this.segments
+    const fz = (z + halfSize) / this.size * this.segments
+
+    // Clamp to bounds
+    const ix = Math.max(0, Math.min(this.segments - 1, Math.floor(fx)))
+    const iz = Math.max(0, Math.min(this.segments - 1, Math.floor(fz)))
+
+    // Bilinear interpolation for smooth height
+    const tx = fx - Math.floor(fx)
+    const tz = fz - Math.floor(fz)
+    const s = this.segments + 1
+
+    const h00 = this.heightData[iz * s + ix]
+    const h10 = this.heightData[iz * s + (ix + 1)] || h00
+    const h01 = this.heightData[(iz + 1) * s + ix] || h00
+    const h11 = this.heightData[(iz + 1) * s + (ix + 1)] || h00
+
+    return h00 * (1-tx)*(1-tz) + h10 * tx*(1-tz) +
+           h01 * (1-tx)*tz     + h11 * tx*tz
+  }
+
+  isOutOfBounds(x, z) {
+    const h = this.size / 2
+    return x < -h || x > h || z < -h || z > h
+  }
+}
+
+PLAYER GROUND SNAPPING (in Player.js update loop):
+  const groundY = terrainCollider.getHeightAt(player.x, player.z)
+  const minY = groundY + PLAYER_HEIGHT_OFFSET  // e.g. + 1.0
+  if (player.y < minY) {
+    player.y = minY
+    player.velocityY = 0
+    player.isGrounded = true
+  }
+
+ADDITIONAL SAFEGUARD:
+  Every frame, after all movement:
+  if (player.y < -50) {
+    // Emergency teleport to last checkpoint
+    player.respawnAtCheckpoint()
+  }
+
+PLATFORM/PROP COLLISION:
+  All buildings, rocks, walls use BoxGeometry colliders
+  cannon-es Box shapes, static bodies (mass = 0)
+  Player capsule body (cannon-es) collides with these
+  Use physics for prop collisions, heightmap for terrain
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2 COMPLETE — PROCEED TO REBIRTH_STEP_3_CHARACTERS_AND_COMBAT.txt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

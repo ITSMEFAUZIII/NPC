@@ -1,0 +1,481 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║   REBIRTH: THE MAGICIAN — STEP 4 of 6                                       ║
+║   EQUIPMENT, PROGRESSION, CRAFTING, ECONOMY, LOOT SYSTEM                   ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1 — EQUIPMENT TIER SYSTEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+5 EQUIPMENT TIERS (color coded):
+
+  TIER 1 — BEGINNER   (grey   #9a9a9a) Level req: 1
+    Dropped by: basic enemies, starter chests
+    Stat bonus: low (+5-15 per stat)
+    Visual: plain geometry, no glow, no effects
+
+  TIER 2 — COMMON     (green  #40c060) Level req: 10
+    Dropped by: area 1-2 enemies, common chests
+    Stat bonus: moderate (+15-35 per stat)
+    Visual: slight sheen on material
+
+  TIER 3 — RARE       (blue   #4080ff) Level req: 25
+    Dropped by: elite enemies, area 2-4 enemies
+    Stat bonus: good (+35-70 per stat)
+    Visual: faint glow + 1 special property
+    Special properties (1 random):
+      - Element resistance +15%
+      - Skill cooldown -10%
+      - MP cost -15%
+      - Move speed +1
+
+  TIER 4 — EPIC       (purple #a040ff) Level req: 50
+    Dropped by: bosses, rare chests, area 4-5 enemies
+    Stat bonus: high (+70-130 per stat)
+    Visual: persistent glow aura + particle trail
+    Special properties (2 random from extended list):
+      - Element bonus +20%
+      - On kill: restore 5% HP
+      - Crit damage +30%
+      - Skill X deals +25% damage
+      - Elemental reaction bonus +20%
+      - DEF penetration +15%
+
+  TIER 5 — LEGENDARY  (gold   #f0c040) Level req: 75
+    Dropped by: final boss, secret areas, crafting only
+    Stat bonus: massive (+130-200 per stat)
+    Visual: bright glow + orbiting particles + unique geometry detail
+    Special properties (3 random + 1 UNIQUE per item):
+      Unique properties examples:
+        - "Arcane Dominion": Meteor Strike cooldown -50%
+        - "Iron Fortress": Block absorbs 100% damage once per fight
+        - "Ghost Arrow": Sniper's Eclipse pierces infinitely
+        - "Thunder God's Fist": Thunder Fist triggers chain to 5 enemies
+    Each legendary has a LORE TEXT describing its origin
+
+EQUIPMENT LEVEL SYSTEM:
+  Each equipment piece has its own level (1-10)
+  Equipment level increases via ENHANCEMENT (materials + gold)
+  Each level: +10% base stats of item
+  Equipment level resets to 1 if sold/dismantled
+  Visual: equipment glows brighter per level
+          Small Roman numeral indicator (I-X) on item icon
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2 — EQUIPMENT SLOTS & SETS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+6 EQUIPMENT SLOTS:
+  WEAPON     — primary damage stat, role-specific
+  ARMOR      — DEF, HP bonus
+  HELMET     — DEF, CRIT bonus
+  BOOTS      — SPD, dodge bonus
+  ACCESSORY1 — flexible, any stat bonus
+  ACCESSORY2 — flexible, any stat bonus
+
+WEAPON TYPES PER ROLE:
+  Magician  : Staff, Wand, Tome (equippable as weapon)
+  Swordsman : Sword+Shield, Greatsword (2H, no shield)
+  Archer    : Shortbow, Longbow, Crossbow
+  Fighter   : Gauntlets, Claws, Knuckles
+
+EQUIPMENT SETS (wearing 3+ pieces of same set = bonus):
+  Set bonuses activate at 2/4/6 pieces equipped
+
+  SET: KRAETOS EARTHWARDEN (Area 1 boss drop)
+    2pc: DEF +15%
+    4pc: Earth skills deal +20% damage
+    6pc: After taking damage — stone shield absorbs next hit
+
+  SET: VETHIS SHADOWWEAVE (Area 2 boss drop)
+    2pc: Dark element bonus +20%
+    4pc: Stealth duration +3s, first strike +100% damage
+    6pc: On kill — become invisible for 2s
+
+  SET: PYRAAK TITAN FORGE (Area 3 boss drop)
+    2pc: Fire damage +25%
+    4pc: Burn duration +4s, burn damage +50%
+    6pc: Immune to burn, own fire skills have no cooldown for 5s
+
+  SET: VORTHYS GLACIAL HEART (Area 4 boss drop)
+    2pc: Ice damage +25%, freeze duration +1s
+    4pc: When frozen enemy dies — ice explosion 4m radius
+    6pc: Ice Lance pierces all enemies, Ice ultimates -30% cooldown
+
+  SET: ZHARKON STORMBORN (Area 5 boss drop)
+    2pc: Thunder+Wind damage +20% each
+    4pc: Thunder Chain bounces 3 additional times
+    6pc: Every 5th attack triggers mini storm (auto chain lightning)
+
+  SET: VALDRIS LEGACY (Final boss drop — rarest)
+    2pc: All element bonus +15%
+    4pc: Ultimate skills cooldown -40%
+    6pc: PASSIVE — Every elemental reaction triggers an additional
+         free reaction of the same type
+    This set only has Legendary tier pieces
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3 — COMPLETE EQUIPMENT LIST (data/equipment.js)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+EQUIPMENT DATA STRUCTURE:
+{
+  id: string,
+  name: string,
+  tier: 1-5,
+  type: 'weapon'|'armor'|'helmet'|'boots'|'accessory',
+  role: 'magician'|'swordsman'|'archer'|'fighter'|'any',
+  levelReq: number,
+  equipLevel: 1,        // current enhancement level
+  stats: {
+    hp: 0, mp: 0, atk: 0, def: 0,
+    spd: 0, crit: 0, critDmg: 0,
+    elementBonus: {}
+  },
+  set: string | null,   // set name if part of a set
+  specialProps: [],     // array of special property objects
+  lore: string,         // flavor text
+  color: string,        // hex for visual tint
+  visual: {             // how to render this item on character
+    geometry: string,   // 'staff'|'sword'|'bow'|'gauntlet' etc
+    scale: [x,y,z],
+    offset: [x,y,z],
+    glowColor: string,
+    glowIntensity: number
+  }
+}
+
+STARTER EQUIPMENT (auto-given at game start):
+  Apprentice Staff    T1 Magician  weapon  ATK+8
+  Initiate Robe       T1 Magician  armor   DEF+5, MP+20
+  Leather Cap         T1 any       helmet  DEF+3
+  Worn Boots          T1 any       boots   SPD+1
+  Copper Ring         T1 any       acc     HP+15
+
+  Iron Sword          T1 Swordsman weapon  ATK+10
+  Wooden Shield       T1 Swordsman weapon  DEF+8
+  Chainmail           T1 Swordsman armor   DEF+10
+  (same helmet/boots/accessory as above)
+
+  Hunting Bow         T1 Archer    weapon  ATK+9, CRIT+2%
+  Scout Leather       T1 Archer    armor   DEF+4, SPD+1
+  (same others)
+
+  Iron Knuckles       T1 Fighter   weapon  ATK+12
+  Padding Vest        T1 Fighter   armor   HP+30, DEF+6
+  (same others)
+
+NOTABLE EQUIPMENT EXAMPLES:
+
+  "Stormcaller Staff"    T3 Magician weapon  ATK+55, MP+40
+    Special: Thunder skills +20% damage
+    Set: none
+    Visual: Staff tip crackles with lightning
+
+  "Shadowbane Blade"     T3 Swordsman weapon ATK+50, CRIT+5%
+    Special: +30% damage vs Dark element enemies
+    Set: none
+    Lore: "Forged in the last days of the Arcane Spire."
+
+  "Phantom Longbow"      T4 Archer   weapon  ATK+85, CRIT+12%
+    Special: Arrows pass through one enemy (pierce)
+    Special: On crit — enemy is blinded 1s
+    Set: none
+    Visual: Bow glows purple, ghost arrows trail
+
+  "Titan Gauntlets"      T4 Fighter  weapon  ATK+90, HP+80
+    Special: Ground Slam radius +3 units
+    Special: Stun duration +0.5s on all skills
+    Set: Pyraak Titan Forge (weapon piece)
+
+  "Arcane Dominion Staff" T5 Magician weapon ATK+160, MP+100
+    Special: Meteor Strike cooldown -50%
+    Special: Arcane Vortex pulls 50% stronger
+    Unique: Every 4th Fireball is auto-cast free (no MP/CD)
+    Set: Valdris Legacy (weapon piece)
+    Lore: "This staff was Valdris's own, before the corruption."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 4 — PLAYER PROGRESSION SYSTEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+LEVEL SYSTEM:
+  Max level: 100
+  EXP required: baseEXP * (level ^ 1.8)
+  baseEXP = 100
+
+  EXP SOURCES:
+    Kill normal enemy: enemy.level * 8
+    Kill elite enemy:  enemy.level * 20
+    Kill boss:         boss.expReward (fixed, large)
+    Complete quest:    quest.expReward
+    Discover location: 50 EXP
+    Open chest:        10 EXP
+    Elemental reaction: +5 EXP bonus
+
+LEVEL UP REWARDS:
+  Every level:
+    HP +10 + (role HP growth)
+    MP +5  + (role MP growth)
+    ATK +2 + (role ATK growth)
+    DEF +1 + (role DEF growth)
+    SPD +0.1
+    CRIT +0.1%
+
+  HP growth per role:
+    Fighter  : +15/level
+    Swordsman: +12/level
+    Archer   : +8/level
+    Magician : +6/level
+
+  ATK growth per role:
+    Magician : +3/level
+    Archer   : +2.5/level
+    Fighter  : +2.5/level
+    Swordsman: +2/level
+
+LEVEL UP VISUAL:
+  Bright flash of light
+  Level number bursts from player (+1 floating up)
+  "LEVEL UP" screen overlay (2 seconds)
+  Shows old level → new level
+  Lists new stats gained
+  Fanfare sound (ascending notes)
+
+SKILL UNLOCK BY LEVEL:
+  Level 1  : Basic Attack + Skill 1
+  Level 5  : Skill 2
+  Level 10 : Skill 3
+  Level 15 : Elemental Skill
+  Level 20 : Passive Skill
+  Level 30 : Ultimate Skill
+  Level 50 : Skill enhancement (each skill gets +1 rank)
+  Level 75 : Second passive slot unlocks
+
+STAT POINTS (optional customization):
+  Every 5 levels: +3 stat points to distribute
+  Stats: HP, MP, ATK, DEF, SPD, CRIT, CritDMG, ElemBonus
+  Max investment per stat: 50 points
+  1 point = +10 HP / +8 MP / +3 ATK / +2 DEF /
+            +0.5 SPD / +1% CRIT / +5% CritDMG / +5% ElemBonus
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 5 — CRAFTING SYSTEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CRAFTING LOCATIONS:
+  Blacksmith NPC in each area village/camp
+  Portable anvil: consumable item, use anywhere
+
+CRAFTING RECIPES:
+  Each recipe requires: materials + gold + player level
+  Crafted items always come out at equipment level 1
+
+MATERIAL TYPES:
+  COMMON MATERIALS (drop from normal enemies):
+    Iron Shard       — metal crafting base
+    Leather Strip    — light armor crafting
+    Magic Dust       — enchanting base
+    Elemental Ore    — per-element ore (Fire/Ice/Thunder etc)
+    Monster Core     — enemy type specific
+
+  RARE MATERIALS (drop from elites/bosses):
+    Dragon Scale     — from dragon-type enemies
+    Void Crystal     — from dark enemies
+    Storm Essence    — from thunder/wind enemies
+    Frost Heart      — from ice enemies
+    Shard Fragment   — from boss areas
+
+  LEGENDARY MATERIALS (boss-only drops):
+    Boss Core        — specific to each boss
+    Ancient Rune     — rare drop from any boss
+    Aether Dust      — Valdris drop only
+
+CRAFTING RECIPES EXAMPLES:
+
+  Sorcerer's Staff T2:
+    2x Iron Shard + 3x Magic Dust + 100 Gold
+
+  Thunder Rod T3:
+    4x Elemental Ore(Thunder) + 2x Storm Essence
+    + 1x Magic Dust + 500 Gold
+
+  Voidweaver Robe T4:
+    3x Void Crystal + 4x Leather Strip
+    + 2x Monster Core + 1500 Gold
+
+  Arcane Dominion Staff T5 (Legendary):
+    1x Kraetos Boss Core + 1x Vethis Boss Core
+    + 1x Pyraak Boss Core + 3x Ancient Rune
+    + 5x Aether Dust + 10000 Gold
+    Level requirement: 75
+
+ENHANCEMENT SYSTEM:
+  Upgrade any equipment from level 1 to level 10
+  Each level costs: (current_level * 200) Gold
+                    + (current_level) common materials
+  Enhancement level 5 requires 1 rare material
+  Enhancement level 10 requires 1 legendary material
+  Enhancement failure rate:
+    Level 1-5:  0% failure
+    Level 6-8:  20% failure (lose materials, level stays)
+    Level 9:    40% failure
+    Level 10:   60% failure
+  Protection scroll: consumable, prevents failure once
+
+DISMANTLE SYSTEM:
+  Dismantle any equipment → receive materials
+  Higher tier = better materials returned
+  T1: 1x common  T2: 2x common  T3: 1x rare
+  T4: 2x rare    T5: 1x legendary material
+  Equipment level also adds materials when dismantling
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6 — CONSUMABLE ITEMS (data/items.js)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+POTIONS (stackable, hotkey 1-3 to use):
+  Health Potion (S)  : Restore 30% maxHP instantly  — 50 Gold
+  Health Potion (M)  : Restore 60% maxHP instantly  — 120 Gold
+  Health Potion (L)  : Restore 100% maxHP instantly — 280 Gold
+  Mana Potion (S)    : Restore 30% maxMP instantly  — 40 Gold
+  Mana Potion (L)    : Restore 100% maxMP instantly — 200 Gold
+  Elixir             : Restore 50% HP + 50% MP       — 400 Gold
+  Regen Flask        : +8% HP/sec for 15 seconds     — 180 Gold
+  Rage Tonic         : ATK +40% for 30 seconds       — 300 Gold
+  Iron Skin Potion   : DEF +50% for 30 seconds       — 250 Gold
+  Speed Elixir       : SPD +4, dodge refills instantly— 220 Gold
+
+SPECIAL CONSUMABLES:
+  Water Flask        : Negates heat damage 60s (Desert only)
+  Warm Cloak         : Negates cold damage 120s (Mountains only)
+  Torch              : Creates light zone 10 units (Forest only)
+  Antidote           : Removes all debuffs instantly — 150 Gold
+  Teleport Stone     : Instant warp to last checkpoint — 500 Gold
+  Protection Scroll  : Prevents next enhancement failure — 800 Gold
+  EXP Scroll         : +50% EXP gain for 5 minutes — 600 Gold
+
+ITEM QUICK-USE:
+  Keyboard: 1 = Health Potion  2 = Mana Potion  3 = Antidote
+  4 = Special item slot
+  All potions have 3s cooldown after use (no spam)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 7 — ECONOMY & SHOPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+GOLD SOURCES:
+  Enemy kill:    enemy.level * 3 gold (random ±20%)
+  Boss kill:     boss.goldReward (fixed)
+  Chest:         50-500 gold (tier based)
+  Quest reward:  quest.goldReward
+  Sell equipment: 20% of buy price
+
+SHOP INVENTORY:
+  Each area has a shop with:
+    - Consumables (always stocked)
+    - T1-T2 equipment for that area's level range
+    - Crafting materials (limited stock, restocks daily)
+    - Special items based on area
+
+  Shop rotates 20% of stock every in-game day
+  RARE DEALS: 10% chance a T3 item appears at 50% discount
+  VIP system: spend 1000+ gold in shop = 5% permanent discount
+
+ECONOMY BALANCE:
+  Early game (L1-25): gold is tight, potion conservation matters
+  Mid game (L25-60): comfortable, can afford some crafting
+  Late game (L60-100): gold flows, focus on Legendary crafting
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 8 — LOOT DROP SYSTEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DROP RATES:
+  Normal enemy:
+    Gold drop:        100%
+    Common material:  60%
+    Equipment T1:     25%
+    Equipment T2:     8%
+    Equipment T3:     1%
+    Consumable:       30%
+
+  Elite enemy:
+    Gold drop:        100% (3x normal)
+    Rare material:    50%
+    Equipment T2:     40%
+    Equipment T3:     20%
+    Equipment T4:     3%
+
+  Boss:
+    Boss equipment set piece: 80% (random piece)
+    Boss material (Core):     100%
+    Rare material:            100% (2-3 pieces)
+    Equipment T4:             60%
+    Equipment T5:             5%
+    Elemental Shard:          100% (required for story)
+
+LOOT VISUAL:
+  Items drop as glowing orbs on ground
+  Color matches tier (grey/green/blue/purple/gold)
+  Orbit slowly, slight glow
+  Hover text shows item name when player nearby
+  Auto-pickup radius: 1.5 units (walk over = auto collect)
+  Inventory full: orbs pulse red, "FULL" text appears
+  Orbs despawn after 3 minutes if not collected
+
+LOOT ANNOUNCEMENT:
+  Equipment T3+: popup notification top of screen
+    "[Item Name] — RARE" in blue
+    "[Item Name] — EPIC" in purple
+    "[Item Name] — LEGENDARY" in gold + fanfare sound
+  Legendary drop: screen briefly flashes gold color
+    Special particle burst from item
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 9 — CHECKPOINT & DEATH SYSTEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CHECKPOINT ACTIVATION:
+  Walk within 3 units of checkpoint stone pillar
+  Visual: pillar lights up, particles burst upward
+  Sound: ascending chime
+  "CHECKPOINT REACHED" text appears
+  Checkpoint saves: position, HP/MP, all progress
+
+DEATH SEQUENCE:
+  1. Player HP reaches 0
+  2. Slow-motion effect (0.2x speed, 1 second)
+  3. Player death animation (collapse forward)
+  4. Screen fades to grey, then black (2 seconds)
+  5. Death screen appears (see STEP 5 UI)
+  6. Options:
+     a) Respawn at checkpoint (free, unlimited)
+     b) Respawn at death location (costs 20% current gold)
+
+RESPAWN:
+  Fade in from black at checkpoint
+  Player HP restored to 50%
+  Player MP restored to 50%
+  All enemies in area respawn (optional: toggle in settings)
+  Boss: does NOT respawn HP (keeps current %, fight continues)
+  Boss full reset: only if player dies AND uses Teleport Stone
+
+DEATH PENALTY:
+  No equipment loss
+  No EXP loss
+  Gold loss: 5% of current gold (on respawn at checkpoint)
+  No gold loss if respawning at death location (but costs gold)
+
+SAVE SYSTEM (engine/SaveSystem.js):
+  Auto-save every: checkpoint activation, area transition, quest complete
+  Manual save: pause menu → Save
+  Save data stored: localStorage key "rebirth_save_v1"
+  Save includes: player stats, inventory, position, quest state,
+                 defeated bosses, opened chests, world flags
+  New Game+: on completion — starts new game, player keeps:
+             equipment, level, skills — enemies scale up 50%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4 COMPLETE — PROCEED TO REBIRTH_STEP_5_QUEST_AND_UI.txt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
