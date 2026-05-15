@@ -1,0 +1,858 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║   REBIRTH: THE MAGICIAN — STEP 3 of 6                                       ║
+║   PLAYER ROLES, SKILLS, COMBAT, ENEMIES, BOSSES, ANIMATIONS                ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1 — PLAYER CONTROLLER (characters/Player.js)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MOVEMENT:
+  Walk speed  : 5.0 units/sec
+  Run speed   : 9.0 units/sec (Shift held)
+  Sprint speed: 13.0 units/sec (double-tap W, 3 sec duration)
+  Jump height : 4.0 units
+  Air control : 0.4 (reduced movement while airborne)
+  Dodge roll  : Space while moving = 6 unit dash, 0.8s cooldown
+                iframe (invincible) during first 0.3s of dodge
+
+MOVEMENT IMPLEMENTATION:
+  Direction from camera yaw + WASD input
+  cannon-es Capsule body (radius 0.4, height 1.6)
+  velocityY handled manually (gravity -20 units/sec²)
+  Ground check: raycast downward 0.6 units
+  Slope limit: if slope > 45deg, slide down
+
+COMBAT STATE MACHINE:
+  idle → attacking → recovery → idle
+  idle → dodging → idle
+  idle → casting → idle (for skills with cast time)
+  Any state → stunned → recovery
+  Any state → dead
+
+COMBAT INPUTS:
+  Left Click  : Basic Attack
+  Right Click : Block/Parry (Swordsman) / Aim (Archer)
+  Q           : Skill 1
+  E           : Skill 2
+  R           : Skill 3
+  F           : Elemental Skill
+  T / X       : Ultimate Skill
+  Space       : Dodge Roll
+  Z           : Lock-on target (cycle with mouse wheel)
+
+LOCK-ON SYSTEM:
+  Press Z: lock camera to nearest enemy within 15 units
+  Camera orbits around locked enemy
+  Movement is relative to locked direction
+  Press Z again or enemy dies: release lock
+  Visual: circular ring indicator around locked target
+
+HITBOX SYSTEM:
+  Player has attack hitbox (enabled during attack frames only)
+  BoxGeometry or SphereGeometry per attack
+  Check overlap with enemy colliders each frame during attack
+  On hit: apply damage, trigger hit reaction on enemy
+
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2 — ROLE: MAGICIAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COLOR THEME  : Purple #a040ff
+ELEMENT      : Rotates (player chooses elemental affinity)
+PLAYSTYLE    : Ranged burst damage, AoE, crowd control
+STAT FOCUS   : MP, ATK, ElementBonus
+WEAKNESS     : Low DEF, slow in melee range
+
+VISUAL DESIGN (procedural geometry):
+  Body     : CapsuleGeometry(0.28, 0.9) — deep purple robe #2a1045
+  Head     : SphereGeometry(0.22) — pale skin
+  Hat      : ConeGeometry(0.25, 0.5, 8) — pointed wizard hat, dark purple
+  Staff    : CylinderGeometry(0.04, 0.04, 2.2) held in right hand
+             Staff tip: SphereGeometry(0.12), glowing elemental color
+             Orbiting orbs: 3 small SphereGeometry, orbit staff tip
+  Cape     : PlaneGeometry, dark purple, flow animation
+  AURA     : Faint particle ring at feet, elemental color
+
+BASE STATS (level 1):
+  HP: 80  MP: 150  ATK: 25  DEF: 8  SPD: 5  CRIT: 8%
+
+PASSIVE — ARCANE MASTERY:
+  Every 3rd spell hit triggers MANA SURGE
+  Next skill costs 0 MP and deals +40% damage
+  Visual: staff glows bright, orbs spin faster
+
+SKILLS:
+
+  BASIC ATTACK — Arcane Bolt
+    Type     : Projectile (SphereGeometry, elemental color)
+    Damage   : ATK * 0.8
+    Range    : 20 units
+    Speed    : 18 units/sec
+    Cast time: 0.3s
+    Cooldown : none (basic attack)
+    Element  : current elemental affinity
+    Effect   : Applies element to enemy
+
+  SKILL 1 — Fireball [Q]
+    Type     : Projectile, explodes on impact
+    Damage   : ATK * 2.2 (Fire)
+    Range    : 25 units
+    Radius   : 4 unit explosion
+    Cast time: 0.5s
+    Cooldown : 4s
+    MP cost  : 20
+    Visual   : Orange sphere projectile, trails fire particles
+               On impact: large orange explosion burst, smoke ring
+    Element  : Fire
+
+  SKILL 2 — Ice Lance [E]
+    Type     : Fast piercing projectile (hits multiple enemies)
+    Damage   : ATK * 1.8 (Ice) per enemy hit
+    Range    : 30 units
+    Pierce   : hits all enemies in line
+    Cast time: 0.4s
+    Cooldown : 5s
+    MP cost  : 18
+    Effect   : 40% slow for 3s
+    Visual   : White-blue spike, ice crystal trail
+    Element  : Ice
+
+  SKILL 3 — Thunder Chain [R]
+    Type     : Chain lightning (bounces between enemies)
+    Damage   : ATK * 1.5 per bounce, -10% per bounce
+    Max chain: 5 enemies
+    Range    : 15 unit chain radius
+    Cooldown : 7s
+    MP cost  : 25
+    Effect   : 20% paralyze chance per hit
+    Visual   : Yellow electric arc LineGeometry between targets
+               Sparks burst at each target
+    Element  : Thunder
+
+  ELEMENTAL SKILL — Arcane Vortex [F]
+    Type     : AoE pull + damage zone
+    Damage   : ATK * 1.2 per tick (0.5s ticks, 4s duration)
+    Radius   : 8 units
+    Cooldown : 12s
+    MP cost  : 35
+    Effect   : Pulls nearby enemies toward center
+               Applies current affinity element each tick
+    Visual   : Swirling vortex of elemental particles
+               PointLight at center, pulsing
+    Element  : Current affinity
+
+  SKILL 4 — Mana Shield [T passive toggle]
+    Type     : Absorb barrier
+    Shield   : 30% of maxMP as shield HP
+    Duration : Until broken or 30s
+    Cooldown : 20s after broken
+    MP cost  : 30
+    Effect   : Absorbs damage, reduces incoming by 60%
+    Visual   : Transparent hexagonal barrier around player
+               Cracks appear as shield depletes
+    Note     : Shield has HP bar shown under player HP
+
+  SKILL 5 — Time Slow [passive slot / secondary]
+    Type     : Area time dilation
+    Radius   : 12 units around player
+    Duration : 3s
+    Cooldown : 25s
+    MP cost  : 40
+    Effect   : All enemies in range move at 20% speed
+               Player moves at 100% speed
+    Visual   : Blue ripple wave expands outward
+               Enemies inside have blue tint overlay
+               Particle dust frozen in air
+
+  ELEMENTAL ULTIMATE — Meteor Strike [X]
+    Type     : Delayed AoE nuke
+    Damage   : ATK * 8.0 (Fire)
+    Radius   : 12 units
+    Delay    : 2s warning before impact
+    Cooldown : 45s
+    MP cost  : 60
+    Effect   : Stuns all hit enemies 2s, leaves fire zone 5s
+    Visual   : Red targeting circle appears on ground
+               Glowing meteor falls from sky over 2 seconds
+               MASSIVE explosion on impact
+               Screen shake intensity 0.8 for 0.5s
+               Camera zoom out briefly on cast
+               Cinematic slow-mo on impact (0.3s at 0.2x speed)
+    Element  : Fire
+
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3 — ROLE: SWORDSMAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COLOR THEME  : Blue #4080ff
+ELEMENT      : Earth / Light (defensive elements)
+PLAYSTYLE    : Tanky melee, counter-attack, shield block
+STAT FOCUS   : HP, DEF, ATK
+WEAKNESS     : Short range, slow cast skills
+
+VISUAL DESIGN:
+  Body     : CapsuleGeometry(0.32, 1.0) — steel armor #607080
+  Head     : SphereGeometry(0.25) + helmet BoxGeometry visor
+  Sword    : BoxGeometry(0.08, 1.4, 0.06) — metallic #c0c0d0
+             Blue energy line along blade edge (emissive)
+  Shield   : BoxGeometry(0.6, 0.8, 0.08) — crest geometry overlay
+             Shield glow when blocking: blue rim light
+  Shoulder plates: BoxGeometry, heavier armor look
+  Cape     : Short, blue, billows in combat
+
+BASE STATS (level 1):
+  HP: 140  MP: 60  ATK: 20  DEF: 20  SPD: 4  CRIT: 5%
+
+PASSIVE — IRON VANGUARD:
+  Each successful block restores 5% max HP
+  After 3 blocks in 5 seconds: COUNTER STANCE activates
+  Next attack deals +100% damage and stuns 1s
+  Visual: shield pulses blue after each block
+
+SKILLS:
+
+  BASIC ATTACK — Sword Slash (3-hit combo)
+    Hit 1: ATK * 0.9  (horizontal slash)
+    Hit 2: ATK * 1.0  (upward slash)
+    Hit 3: ATK * 1.5  (heavy downward slam)
+    Combo window: 0.8s between hits
+    Each hit: sword trail effect (white/blue arc)
+    Element  : Earth (grounded hits)
+
+  SKILL 1 — Shield Bash [Q]
+    Damage   : ATK * 1.2 + DEF * 0.3
+    Range    : 2.5 units
+    Cooldown : 5s
+    MP cost  : 10
+    Effect   : Stun 1.5s, knockback 3 units
+    Visual   : Blue shockwave burst from shield
+    Element  : Earth
+
+  SKILL 2 — Whirlwind Slash [E]
+    Damage   : ATK * 1.4 per hit, 360 degree spin
+    Hits     : 3 rotations = 3 hits
+    Range    : 3 units radius
+    Cooldown : 8s
+    MP cost  : 20
+    Effect   : Knockback all hit enemies
+    Visual   : Sword trails full circle, blue energy ring
+    Element  : Wind (secondary)
+
+  SKILL 3 — Battle Cry [R]
+    Type     : Self buff
+    Duration : 10s
+    Cooldown : 18s
+    MP cost  : 15
+    Effect   : ATK +30%, DEF +20%, immune to stun
+    Visual   : Golden aura erupts from player
+               Shockwave pushes nearby enemies back
+               Player model briefly larger (scale 1.1x)
+
+  ELEMENTAL SKILL — Counter Strike [F]
+    Type     : Parry window + counter
+    Duration : 0.6s parry window
+    Cooldown : 10s
+    MP cost  : 15
+    Trigger  : If hit during window — counter attack
+    Counter  : ATK * 4.0, Light element, no cooldown
+    Visual   : White flash on parry
+               Dramatic slow-mo (0.2x speed, 0.5s) on counter
+               Bright light explosion on counter hit
+
+  SKILL 5 — Blade Barrier [passive stance]
+    Type     : Block stance (hold Right Click)
+    Effect   : Reduce damage by 70% while blocking
+               Cannot move, can rotate
+               Perfect block (0.2s timing): 0 damage + stagger enemy
+    Visual   : Blue energy wall in front of player
+
+  ULTIMATE — Execution [X]
+    Type     : Instant kill / massive damage
+    Damage   : ATK * 6.0 + (target missing HP * 0.1)
+    Range    : 4 units
+    Cooldown : 50s
+    MP cost  : 50
+    Condition: +50% damage if target below 30% HP
+    Visual   : Player leaps forward
+               Sword charges with bright blue energy (1s)
+               Single devastating downward strike
+               Screen flash white on hit
+               Cinematic angle shift for 1 second
+               If kills enemy: dramatic slow-mo death animation
+    Element  : Light
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 4 — ROLE: ARCHER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COLOR THEME  : Green #40c040
+ELEMENT      : Wind / Dark (fast + stealth)
+PLAYSTYLE    : Long range, critical hits, mobility
+STAT FOCUS   : CRIT, SPD, ATK
+WEAKNESS     : Low HP, low DEF, weak at close range
+
+VISUAL DESIGN:
+  Body     : CapsuleGeometry(0.26, 0.85) — leather #4a3820
+  Head     : SphereGeometry(0.21) + hood PlaneGeometry
+  Bow      : TorusGeometry(0.5, 0.04, 4, 12, Math.PI) — wood + string
+             String: LineGeometry, animates on draw
+  Quiver   : CylinderGeometry on back, arrows sticking out
+  Hood     : Dark green, partially covers face
+  Cloak    : Longer cape, dark green, covers legs
+
+BASE STATS (level 1):
+  HP: 90  MP: 80  ATK: 22  DEF: 10  SPD: 8  CRIT: 15%
+
+PASSIVE — EAGLE EYE:
+  Each consecutive hit on same target: CRIT rate +5% (max +25%)
+  Resets when switching targets or missing
+  At max stacks: next hit guaranteed CRIT + Wind element added
+  Visual: green targeting reticle tightens with each stack
+
+SKILLS:
+
+  BASIC ATTACK — Arrow Shot
+    Type     : Fast projectile (CylinderGeometry arrow)
+    Damage   : ATK * 1.0
+    Range    : 35 units
+    Speed    : 30 units/sec
+    Cooldown : 0.4s between shots
+    AIM MODE : Hold Right Click — zoom camera, slow movement
+               In aim mode: +30% damage, +20% CRIT
+    Visual   : Arrow trail (thin line), green feathers
+    Element  : Wind
+
+  SKILL 1 — Multi Shot [Q]
+    Type     : 5 arrows in spread fan
+    Damage   : ATK * 0.7 per arrow
+    Spread   : 40 degree fan
+    Range    : 25 units
+    Cooldown : 5s
+    MP cost  : 18
+    Visual   : 5 arrows fired simultaneously, green energy tips
+    Element  : Wind
+
+  SKILL 2 — Poison Arrow [E]
+    Type     : Single heavy arrow
+    Damage   : ATK * 1.2 + 15 poison/sec for 8s
+    Range    : 35 units
+    Cooldown : 8s
+    MP cost  : 20
+    Effect   : Dark poison DoT, reduces enemy DEF by 20%
+    Visual   : Dark green arrow, dripping poison particles
+               Green cloud on hit, enemy gets green tint overlay
+    Element  : Dark
+
+  SKILL 3 — Smoke Bomb [R]
+    Type     : Area stealth + blind
+    Radius   : 6 units
+    Duration : 5s
+    Cooldown : 12s
+    MP cost  : 15
+    Effect   : Player enters stealth (enemies lose target)
+               Enemies in smoke: blind (-80% accuracy)
+               First attack from stealth: +150% damage
+    Visual   : Grey-green smoke cloud expands
+               Player becomes 40% transparent in smoke
+               Stealth shimmer effect on player
+
+  ELEMENTAL SKILL — Rain of Arrows [F]
+    Type     : Delayed AoE barrage
+    Damage   : ATK * 0.9 per arrow, 20 arrows total
+    Area     : 10 unit radius target zone
+    Duration : 3s barrage
+    Cooldown : 15s
+    MP cost  : 35
+    Effect   : Continuous damage zone, slows enemies 30%
+    Visual   : Player fires upward dramatically
+               20 arrows arc high and rain down
+               Arrow impact particles on ground
+               Area marked with wind circle before impact
+
+  SKILL 5 — Shadow Step [passive]
+    Type     : Enhanced dodge
+    Effect   : Dodge roll leaves afterimage decoy
+               Decoy draws enemy attention for 2s
+               Dodge cooldown reduced to 0.4s (from 0.8s)
+    Visual   : Dark silhouette left where player was
+               Fades after 2 seconds
+
+  ULTIMATE — Sniper's Eclipse [X]
+    Type     : Charged single shot
+    Damage   : ATK * 10.0, guaranteed CRIT
+    Range    : 60 units (longest range in game)
+    Charge   : Hold X for 1.5s to fully charge
+    Cooldown : 40s
+    MP cost  : 45
+    Effect   : Pierces through ALL enemies in line
+               Applies Dark element + Wind element (reaction!)
+               Leaves dark energy trail for 2s
+    Visual   : Camera zooms dramatically to first person
+               Arrow charges with dark + green energy (charging)
+               Release: camera follows arrow path (0.5s)
+               Massive impact: dark explosion + wind burst
+               ECLIPSE reaction triggered (see elemental reactions)
+    Element  : Dark + Wind (dual element)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 5 — ROLE: FIGHTER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COLOR THEME  : Orange #ff8020
+ELEMENT      : Thunder / Earth (raw power)
+PLAYSTYLE    : Aggressive melee, stuns, high burst damage
+STAT FOCUS   : ATK, HP, SPD
+WEAKNESS     : No ranged attacks, no shields
+
+VISUAL DESIGN:
+  Body     : CapsuleGeometry(0.34, 1.05) — heavy build #3a2a1a
+  Head     : SphereGeometry(0.27) — battle-scarred face
+  Gauntlets: BoxGeometry on each fist, metallic #707080
+             Knuckle spikes: small BoxGeometry protrusions
+             Energy wraps: glowing orange LineGeometry around fists
+  Chest    : BoxGeometry chest armor, battle-worn
+  No cape  : Bare arms for mobility look
+
+BASE STATS (level 1):
+  HP: 160  MP: 50  ATK: 28  DEF: 15  SPD: 6  CRIT: 6%
+
+PASSIVE — BERSERKER SOUL:
+  Below 30% HP: ATK +50%, SPD +30%, cannot be stunned
+  Each kill restores 8% max HP
+  Visual: orange flames appear around body when below 30%
+          Eyes glow orange, movement becomes aggressive
+
+SKILLS:
+
+  BASIC ATTACK — Power Punch (4-hit combo)
+    Hit 1: ATK * 1.0  (left jab)
+    Hit 2: ATK * 1.0  (right jab)
+    Hit 3: ATK * 1.2  (body blow, stagger)
+    Hit 4: ATK * 2.0  (uppercut, launches enemy)
+    Combo window: 0.7s
+    Element  : Thunder (each punch sparks electricity)
+
+  SKILL 1 — Ground Slam [Q]
+    Damage   : ATK * 2.0 (Earth)
+    Radius   : 5 units AoE
+    Cooldown : 6s
+    MP cost  : 15
+    Effect   : Stun 1s, launch small enemies upward
+    Visual   : Jump + ground pound
+               Crack geometry spawns on ground
+               Dirt/rock particles burst outward
+               Screen shake 0.3 intensity
+    Element  : Earth
+
+  SKILL 2 — Grab and Throw [E]
+    Damage   : ATK * 1.8 (impact)
+    Range    : 2.5 units (must be close)
+    Cooldown : 9s
+    MP cost  : 10
+    Effect   : Grabs enemy, throws 10 units
+               If enemy hits wall/another enemy: +ATK*1.0 bonus
+               Cannot grab bosses (stagger instead)
+    Visual   : Player grabs enemy model
+               Dramatic throw animation
+               Thrown enemy tumbles through air
+
+  SKILL 3 — Thunder Fist [R]
+    Damage   : ATK * 3.0 (Thunder)
+    Range    : 4 units
+    Cooldown : 10s
+    MP cost  : 25
+    Effect   : Dash forward, massive single punch
+               Paralyze 2s, launches enemy
+               Chain lightning to 2 nearby enemies
+    Visual   : Orange-yellow electricity charges fist
+               Dash leaves electric trail
+               MASSIVE punch impact burst
+               Thunder crack sound
+    Element  : Thunder
+
+  ELEMENTAL SKILL — Iron Rage [F]
+    Type     : Self-buff stance
+    Duration : 8s
+    Cooldown : 20s
+    MP cost  : 30
+    Effect   : DEF +40% (Iron Body)
+               All attacks stagger enemies
+               Basic attack becomes 2-hit slam
+               Cannot be knocked back
+    Visual   : Stone/earth texture crawls over armor
+               Brown-orange glow
+               Heavy footstep impact particles
+
+  SKILL 5 — Endure [passive]
+    Type     : Damage absorption
+    Effect   : Once per 30s — survive a lethal hit with 1 HP
+               After surviving: brief invincibility 1s
+    Visual   : Orange flash when triggered
+               "ENDURE" text floats up
+
+  ULTIMATE — Berserker Rampage [X]
+    Type     : Multi-hit dash rampage
+    Damage   : ATK * 1.5 per hit, 8 hits total
+    Cooldown : 55s
+    MP cost  : 45
+    Duration : 3s
+    Effect   : Dash rapidly between all nearby enemies
+               Each hit applies Thunder + Earth (reaction!)
+               Final hit: massive explosion, ATK * 5.0
+               All enemies in 8 units knocked back
+    Visual   : Player becomes blur of motion
+               Orange-electric afterimages trail
+               Each hit: flash + spark burst
+               Final hit: MASSIVE orange-thunder explosion
+               Camera shakes throughout
+               Cinematic speed-up effect (1.5x speed)
+    Element  : Thunder + Earth
+
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6 — COMBAT SYSTEM (combat/CombatSystem.js)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DAMAGE FORMULA:
+  baseDamage = skill.damage * player.atk
+  elementBonus = player.stats.elementBonus[skill.element] || 0
+  critMultiplier = isCrit ? (player.stats.critDmg / 100) : 1.0
+  defReduction = enemy.def / (enemy.def + 100)
+  finalDamage = baseDamage * (1 + elementBonus/100)
+               * critMultiplier
+               * (1 - defReduction)
+               + random(-5%, +5%) variance
+
+CRIT CALCULATION:
+  roll = Math.random() * 100
+  isCrit = roll < player.stats.crit
+  On crit: damage number shows in gold color, larger font
+
+DAMAGE NUMBERS (components/HUD/DamageNumbers.jsx):
+  Float above hit position, fade + rise over 1.2s
+  Normal hit  : white #ffffff, size 16
+  Crit hit    : gold #ffd700, size 22, "!" suffix
+  Element hit : element color, size 18
+  Reaction    : element color, size 24, reaction name shown
+  Heal        : green #40ff80, size 16, "+" prefix
+  Max 20 damage numbers visible at once
+
+STATUS EFFECTS (combat/StatusEffects.js):
+  BURN     : Fire,    8% maxHP/sec, 4s, orange particles
+  FREEZE   : Ice,     can't move 2s, blue crystal overlay
+  PARALYZED: Thunder, can't act 1.5s, yellow sparks
+  POISON   : Dark,    5% maxHP/sec, 8s, green drip
+  STUNNED  : Various, can't act, stars over head
+  BLIND    : Wind,    -80% accuracy, grey overlay
+  CURSED   : Dark,    -30% all stats, purple sigil
+  BURNING  : Fire+,   16% maxHP/sec, 3s (stronger burn)
+  ROOTED   : Earth,   can't move, roots wrap feet
+
+Stack rules:
+  Same effect resets duration (no stacking damage)
+  FREEZE overrides PARALYZED
+  BURN + FREEZE = STEAM BURST (clears both, AoE)
+
+ENEMY HIT REACTION:
+  Light hit (< 20% HP): brief flinch animation
+  Medium hit (< 40% HP): stagger back 0.5 units
+  Heavy hit (> 40% HP): full knockback 2 units
+  Kill hit: ragdoll-like death animation (scripted)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 7 — ENEMY AI (characters/enemies/EnemyAI.js)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ENEMY STATE MACHINE:
+  IDLE     → patrol waypoints, random idle animations
+  ALERT    → player detected, turn toward player
+  CHASE    → move toward player at chaseSpeed
+  ATTACK   → in range, execute attack pattern
+  STAGGER  → hit reaction, brief vulnerability
+  RETREAT  → low HP enemies may flee briefly
+  DEAD     → death animation, loot drop, dispose
+
+DETECTION:
+  Sight range: 15 units (varies per enemy)
+  Sight angle: 120 degrees forward cone
+  Sound range: 8 units (player running triggers this)
+  Line of sight: raycast to player, blocked by terrain
+  Once alerted: stays alerted for 10s after losing sight
+
+PATHFINDING:
+  Simple waypoint system (not full NavMesh)
+  Waypoints placed manually per area
+  Enemy picks nearest waypoint toward player
+  Obstacle avoidance: if blocked, random left/right deflection
+  Flying enemies: direct path to player, ignore terrain
+
+ATTACK PATTERNS (per enemy type in data/enemies.js):
+  Each enemy has array of attacks with:
+    name, damage, range, cooldown, telegraphTime, animDuration
+  telegraphTime: visual warning before attack lands
+    (red indicator circle on ground for AoE, charge animation)
+  Enemy AI picks attack based on distance and cooldown
+
+AGGRO SYSTEM:
+  Single player: always target player
+  Multiple players (future): threat table
+  Taunt skill (Swordsman): force target player for 5s
+
+ENEMY VISUAL DESIGN:
+  All procedural geometry
+  Health bar above enemy (hidden until player attacks)
+  Element indicator icon above health bar
+  Aggro state: eyes change color (yellow = alert, red = attack)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 8 — ALL 6 AREA BOSSES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BOSS INTRO SEQUENCE (all bosses):
+  1. Player enters arena → barrier seals behind them
+  2. Camera cuts to cinematic angle (2 seconds)
+  3. Boss emerges dramatically (rise from ground, drop from sky, etc)
+  4. Boss name + title text appears (Cinzel font, large)
+  5. Boss health bar slides in from top
+  6. Music transitions to boss theme
+  7. Camera returns to player control
+
+BOSS PHASE SYSTEM:
+  All bosses have 2-3 phases based on HP percentage
+  Phase transition: brief invincible period, new visual effect
+  New skills unlock per phase
+  Phase 2 trigger: 60% HP
+  Phase 3 trigger: 30% HP (final bosses only)
+
+─────────────────────────────────────────────────────
+BOSS 1: ELDER GOLEM KRAETOS
+Area: Greenfield Village
+Element: Earth
+HP: 2000   ATK: 35   DEF: 40
+Intro: Rises from ground, stone cracking apart
+
+PHASE 1 (100%-60%):
+  Rock Smash    : Raises arm, slams ground, 4m radius, 80 dmg
+  Stone Throw   : Hurls 3 boulders sequentially, 60 dmg each
+  Stomp         : Shockwave ring, 6m radius, 40 dmg + stun
+  Telegraph: red circle on ground 1.5s before smash
+
+PHASE 2 (60%-0%):
+  ALL PHASE 1 ATTACKS + FASTER
+  Earthquake    : Entire arena shakes, random crack zones appear
+                  Standing in crack: 30 dmg/sec
+  Stone Armor   : Covers self in extra stone, DEF +60% for 8s
+                  DESTROY armor pieces: 5 glowing weak points
+                  Hit all 5 to break armor early
+  Rolling Charge: Curls into ball, rolls across arena 3 times
+
+WEAKNESS: Fire (melts stone), Light (sacred damage)
+LOOT: Earth Shard (required), Kraetos Stone equipment pieces
+REWARD: 500 EXP, 150 Gold, unlocks Darkwood Forest
+
+─────────────────────────────────────────────────────
+BOSS 2: SHADOWLORD VETHIS
+Area: Darkwood Forest
+Element: Dark
+HP: 5000   ATK: 65   DEF: 25
+Intro: Shadow coalesces from darkness, laughs
+
+PHASE 1 (100%-60%):
+  Shadow Slash  : Dark blade swipe, 3m range, 120 dmg
+  Dark Orbs     : 5 seeking orbs circle player, 60 dmg each
+  Teleport      : Vanishes, reappears behind player, backstab 180 dmg
+  Darkness Zone : Arena section goes black, enemies spawn inside
+
+PHASE 2 (60%-30%):
+  Shadow Clone  : Creates 3 illusions of self
+                  Only real Vethis takes damage (glowing eyes)
+  Nightmare     : Player vision distorted 5s (shader effect)
+  Soul Drain    : Leash pulls player, drains 5% HP/sec
+  Void Eruption : Ground bursts, 8 dark pillars emerge
+
+PHASE 3 (30%-0%):
+  TRUE FORM     : Vethis doubles in size, pure dark energy
+  Oblivion      : Full arena dark for 10s, Light skills = only way to see
+  Shadow World  : All attacks deal 2x damage
+  Desperation   : Berserker mode, rapid attacks
+
+WEAKNESS: Light (deals 3x damage), Fire
+LOOT: Dark Shard, Vethis Shadow equipment
+REWARD: 1500 EXP, 400 Gold, unlocks Ashborne Desert
+
+─────────────────────────────────────────────────────
+BOSS 3: IGNIS TITAN PYRAAK
+Area: Ashborne Desert
+Element: Fire
+HP: 9000   ATK: 90   DEF: 35
+Intro: Erupts from volcano vent, 30 feet tall
+
+PHASE 1 (100%-60%):
+  Magma Fist    : Slams ground, lava pool 6m radius, 80 dmg+burn
+  Fire Breath   : Cone 10m long, 3m wide, 150 dmg, ignites ground
+  Meteor Shower : 5 small meteors rain down, marked by red circles
+  Stomp         : 8m shockwave, 100 dmg + knockback
+
+PHASE 2 (60%-30%):
+  Lava Armor    : Body covered in lava — melee dmg reflects 30%
+  Volcanic Rage : ALL attacks x1.5 speed
+  Eruption Pillars: 6 lava jets from ground in pattern
+  Heat Wave     : Arena-wide 30 dmg pulse every 3s for 15s
+
+PHASE 3 (30%-0%):
+  MELTDOWN      : Body starts breaking apart (visual)
+  Pyroclastic Flow: Wall of lava crosses arena (jump to avoid)
+  Core Exposed  : Takes 2x damage but ATK +100%
+  Final Burst   : Dies in massive explosion, 5s warning
+
+WEAKNESS: Ice (steam reaction, massive damage), Wind
+LOOT: Fire Shard, Pyraak Titan equipment
+REWARD: 3000 EXP, 800 Gold, unlocks Frostpeak Mountains
+
+─────────────────────────────────────────────────────
+BOSS 4: GLACIAL DRAKE VORTHYS
+Area: Frostpeak Mountains
+Element: Ice
+HP: 15000  ATK: 110  DEF: 50
+Intro: Crashes down from sky, shatters ice on landing
+
+PHASE 1 (100%-60%):
+  Ice Breath    : Wide cone 12m, 180 dmg, freeze chance 40%
+  Claw Swipe    : 4m range, 120 dmg, knockback
+  Blizzard      : Surrounds self with ice storm, 60 dmg/sec 5s
+  Ice Spike     : Launches from ground under player, 100 dmg
+
+PHASE 2 (60%-30%):
+  Takes flight   : Airborne phase, different attack pattern
+  Dive Bomb      : Swoops down, 200 dmg, massive AoE
+  Ice Storm Rain : Hailstones rain on arena, dodge circles
+  Frost Nova     : Huge freeze AoE from Drake, 8m radius
+  Crystal Prison : Player encased in ice (rapidly attack to break)
+
+PHASE 3 (30%-0%):
+  DESPERATE FLIGHT: Stays airborne, faster
+  Avalanche      : Calls mountain ice, boulders fall
+  Absolute Zero  : Arena floor freezes completely (ice physics)
+  Death Spiral   : Final dive bomb, unavoidable, dodge at last second
+                   Timing window shown by visual indicator
+
+WEAKNESS: Fire (3x damage, Steam reaction), Thunder
+LOOT: Ice Shard, Vorthys Drake equipment
+REWARD: 5000 EXP, 1500 Gold, unlocks Stormcoast Ruins
+
+─────────────────────────────────────────────────────
+BOSS 5: TEMPEST COLOSSUS ZHARKON
+Area: Stormcoast Ruins
+Element: Thunder + Wind
+HP: 22000  ATK: 140  DEF: 45
+Intro: Lightning strikes 3 times, Zharkon assembles from electricity
+
+PHASE 1 (100%-60%):
+  Thunder Fist  : Charged punch, 200 dmg, paralysis
+  Wind Blast    : 15m cone knockback, 100 dmg
+  Static Field  : Arena electrified, 40 dmg/sec, 8s
+  Chain Storm   : Lightning chains between 5 arena pillars
+
+PHASE 2 (60%-30%):
+  STORM FORM    : Partially becomes wind + lightning
+  Tornado       : Spawns 2 moving tornados, pull + 80 dmg/sec
+  Sky Strike    : 8 lightning bolts hit marked positions
+  Wind Wall     : 3 walls of wind cross arena, knockback
+  Overcharge    : Body explodes with electricity, 10m radius
+
+PHASE 3 (30%-0%):
+  CHAOS STORM   : Constant random lightning everywhere
+  Tempest Eye   : Brief safe zone exists in center only
+  Hurricane     : Full arena wind, player must fight wind
+  Death Thunder : 3 massive thunder strikes, all marked
+                  Must dodge all 3 or instant KO
+
+WEAKNESS: Earth (grounds electricity), Ice
+LOOT: Thunder Shard, Wind Shard, Zharkon Colossus equipment
+REWARD: 8000 EXP, 2500 Gold, unlocks Inferno Citadel
+
+─────────────────────────────────────────────────────
+BOSS 6: VALDRIS THE UNDYING (FINAL BOSS)
+Area: Inferno Citadel
+Element: ALL ELEMENTS
+HP: 50000  ATK: 200  DEF: 60
+Intro: Full cinematic — Valdris narrates his story (1 minute)
+       Screen shows his origin: once a simple scholar, corrupted by
+       the shards he tried to contain. He chose power over humanity.
+       Cut to: player standing in throne room.
+
+PHASE 1 — THE SCHOLAR (100%-70%):
+  Appearance: robed, calm, dismissive
+  Dark Pulse    : Wide AoE, 200 dmg, curse
+  Shard Cannon  : Fires all 5 element types, player dodges
+  Null Zone     : Area where player skills don't work (15s)
+  Gravity Well  : Pulls player helplessly to Valdris
+  Quote: "You think power you just found can match what I've built?"
+
+PHASE 2 — THE CONQUEROR (70%-35%):
+  Appearance: armor materializes, larger, intimidating
+  All Shard Attack: All 7 elements cycle in massive combo
+  Army of Shades: 5 Valdris clones appear simultaneously
+  Reality Rend  : Cracks appear in arena — fall through = 50% HP loss
+  Ascension     : Floats up, rains all elements down
+  Quote: "Even your rebirth was my design. Everything was."
+
+PHASE 3 — THE UNDYING (35%-0%):
+  Appearance: shatters armor, pure energy form, massive
+  True Form     : Size 3x, all stats x1.5
+  OBLIVION BEAM : Charges 3s, fires massive beam across arena
+                  Must hide behind appearing pillars
+  Shard Fusion  : Absorbs all shards back — healing 1000 HP
+                  Player must interrupt by hitting him during charge
+  World Break   : Arena starts collapsing (pieces fall away)
+  Despair Aura  : Player max HP reduced to 50% during this phase
+  FINAL ATTACK  : Valdris pulls all energy, massive 15m explosion
+                  IF player has all shards equipped: cut-scene dodge
+                  IF not: must perfectly time dodge
+
+WEAKNESS: Uses ALL elements — elemental reactions deal 3x
+          Light element (from rescued villages): +100% damage
+LOOT: All remaining shards, Valdris Legacy equipment set
+REWARD: Game completion, credits, New Game+ unlock
+Quote on death: "I chose this. I would choose it again.
+                 You... you chose differently. Good."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 9 — ROLE SWITCH SYSTEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SWITCH LOCATIONS:
+  - Role Shrine in each area (glowing stone pillar)
+  - Camp/checkpoint (press C to open camp menu)
+  - NOT during combat (enforced 5s out-of-combat requirement)
+
+WHAT CARRIES OVER:
+  - Player level + EXP
+  - Gold + inventory items + materials
+  - Quest progress
+  - World state (defeated enemies, opened chests)
+
+WHAT CHANGES:
+  - Visual model completely swaps
+  - All stats reset to role base + level bonus
+  - Skills completely replaced
+  - Equipment slots reset (old equipment stored)
+  - New role equipment auto-equips from stored inventory
+  - HP/MP refilled on role switch
+
+TRANSITION ANIMATION:
+  Brief white flash (0.5s)
+  Player model dissolves into particles matching new role color
+  New model assembles from particles
+  Role name displayed: "MAGICIAN" (large, centered, fades)
+  New role music motif plays briefly
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3 COMPLETE — PROCEED TO REBIRTH_STEP_4_EQUIPMENT_AND_PROGRESSION.txt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
